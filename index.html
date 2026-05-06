@@ -1,0 +1,2768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dingus Eggs - Goal Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #ffd700;
+    --gold-soft: #ffed4e;
+    --bg-1: #1a1a2e;
+    --bg-2: #16213e;
+    --bg-3: #0f3460;
+    --panel: rgba(0,0,0,0.42);
+    --panel-soft: rgba(0,0,0,0.28);
+    --border: #2c3e50;
+    --text: #e8e8f0;
+    --text-dim: #8a8aa0;
+    --green: #00b894;
+    --red: #d63031;
+    --blue: #0984e3;
+    --purple: #a29bfe;
+    --orange: #fdcb6e;
+    --pink: #e84393;
+  }
+  body {
+    font-family: 'Courier New', monospace;
+    background:
+      radial-gradient(ellipse at top left, rgba(255,215,0,0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(232,67,147,0.08), transparent 50%),
+      linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    overflow-x: hidden;
+  }
+  .app { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  h1 {
+    text-align: center;
+    font-size: 2.6em;
+    margin-bottom: 4px;
+    text-shadow: 3px 3px 0 #000, -1px -1px 0 var(--gold);
+    color: var(--gold);
+    letter-spacing: 3px;
+  }
+  .tagline { text-align: center; color: var(--text-dim); margin-bottom: 20px; font-size: 0.9em; }
+  .top-bar {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 15px;
+    margin-bottom: 18px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 0 24px rgba(255,215,0,0.18), inset 0 0 30px rgba(255,215,0,0.04);
+  }
+  .panel h2 {
+    color: var(--gold);
+    font-size: 1.05em;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--gold);
+    padding-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  /* Avatar */
+  .avatar-display { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  #avatarCanvas {
+    background: linear-gradient(180deg, #2a2a4e 0%, #1a1a3e 100%);
+    image-rendering: pixelated;
+    width: 256px;
+    height: 256px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    display: block;
+    border-radius: 4px;
+  }
+  /* Avatar frame wrapper — themed by equipped frame */
+  .avatar-frame {
+    padding: 6px;
+    border: 2px solid #555;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.3);
+    transition: all 0.3s;
+    position: relative;
+  }
+  .avatar-frame.frame-wood {
+    padding: 10px;
+    border: 4px solid #5d3a1a;
+    background: linear-gradient(135deg, #8b5a3c 25%, #5d3a1a 100%);
+    box-shadow: 0 0 0 1px #3a2410, inset 0 0 8px rgba(0,0,0,0.5);
+  }
+  .avatar-frame.frame-iron {
+    padding: 10px;
+    border: 4px solid #555;
+    background: linear-gradient(135deg, #888 25%, #555 100%);
+    box-shadow: 0 0 0 1px #222, inset 0 0 8px rgba(0,0,0,0.5);
+  }
+  .avatar-frame.frame-bronze {
+    padding: 10px;
+    border: 4px solid #8b5a2b;
+    background: linear-gradient(135deg, #cd7f32 25%, #8b5a2b 100%);
+    box-shadow: 0 0 6px #cd7f32, inset 0 0 8px rgba(0,0,0,0.4);
+  }
+  .avatar-frame.frame-silver {
+    padding: 10px;
+    border: 4px solid #c0c0c0;
+    background: linear-gradient(135deg, #e6e6e6 25%, #a8a8a8 100%);
+    box-shadow: 0 0 8px #fff, inset 0 0 8px rgba(0,0,0,0.3);
+  }
+  .avatar-frame.frame-gold {
+    padding: 10px;
+    border: 4px solid var(--gold);
+    background: linear-gradient(135deg, var(--gold) 25%, #c9a000 100%);
+    box-shadow: 0 0 14px var(--gold), inset 0 0 8px rgba(255,255,255,0.3);
+  }
+  .avatar-frame.frame-crystal {
+    padding: 10px;
+    border: 4px solid #00d4ff;
+    background: linear-gradient(135deg, #aef0ff 25%, #00d4ff 100%);
+    box-shadow: 0 0 16px #00d4ff, inset 0 0 8px rgba(255,255,255,0.4);
+  }
+  .avatar-frame.frame-dragon {
+    padding: 10px;
+    border: 4px solid #c0392b;
+    background: linear-gradient(135deg, #c0392b 25%, #2c0a0a 100%);
+    box-shadow: 0 0 16px #c0392b, inset 0 0 10px rgba(0,0,0,0.6);
+  }
+  .avatar-frame.frame-cosmic {
+    padding: 10px;
+    border: 4px solid var(--purple);
+    background: linear-gradient(135deg, #6c5ce7, #2d1b4e);
+    box-shadow: 0 0 18px var(--purple), inset 0 0 10px rgba(0,0,0,0.5);
+    animation: cosmicShift 4s infinite alternate;
+  }
+  @keyframes cosmicShift {
+    0% { box-shadow: 0 0 18px var(--purple), inset 0 0 10px rgba(0,0,0,0.5); }
+    50% { box-shadow: 0 0 24px #ff00ff, inset 0 0 10px rgba(0,0,0,0.5); }
+    100% { box-shadow: 0 0 18px #00ffff, inset 0 0 10px rgba(0,0,0,0.5); }
+  }
+  .avatar-frame.frame-phoenix {
+    padding: 10px;
+    border: 4px solid #ff6b1a;
+    background: linear-gradient(135deg, #ffd700, #ff6b1a, #c0392b);
+    box-shadow: 0 0 22px #ff6b1a, inset 0 0 10px rgba(255,255,255,0.3);
+    animation: phoenixGlow 1.6s infinite alternate;
+  }
+  @keyframes phoenixGlow {
+    from { box-shadow: 0 0 18px #ff6b1a, inset 0 0 10px rgba(255,255,255,0.3); }
+    to { box-shadow: 0 0 28px #ffd700, inset 0 0 12px rgba(255,255,255,0.5); }
+  }
+  .avatar-frame.frame-diamond {
+    padding: 10px;
+    border: 4px solid #fff;
+    background: linear-gradient(135deg, #fff 0%, #b9f2ff 50%, #fff 100%);
+    box-shadow: 0 0 20px #fff, 0 0 30px #b9f2ff, inset 0 0 12px rgba(255,255,255,0.6);
+  }
+  .avatar-frame.frame-infinity {
+    padding: 10px;
+    border: 4px solid transparent;
+    background: linear-gradient(45deg, #ff0080, #ff8c00, #ffd700, #00ff80, #00ffff, #8a2be2, #ff0080) border-box;
+    background-size: 400% 400%;
+    box-shadow: 0 0 28px rgba(255,255,255,0.5), inset 0 0 12px rgba(0,0,0,0.4);
+    animation: infinityShift 3s infinite linear;
+  }
+  @keyframes infinityShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 400% 50%; }
+  }
+  .avatar-frame.frame-time {
+    padding: 10px;
+    border: 4px solid #2c3e50;
+    background:
+      conic-gradient(from 0deg, #ffd700 0deg 30deg, #2c3e50 30deg 60deg, #ffd700 60deg 90deg, #2c3e50 90deg 120deg, #ffd700 120deg 150deg, #2c3e50 150deg 180deg, #ffd700 180deg 210deg, #2c3e50 210deg 240deg, #ffd700 240deg 270deg, #2c3e50 270deg 300deg, #ffd700 300deg 330deg, #2c3e50 330deg 360deg);
+    box-shadow: 0 0 24px var(--gold), inset 0 0 10px rgba(0,0,0,0.5);
+    animation: timeRotate 12s infinite linear;
+  }
+  @keyframes timeRotate {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(360deg); }
+  }
+  .level-bar {
+    width: 100%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #555;
+    border-radius: 4px;
+    height: 18px;
+    overflow: hidden;
+    position: relative;
+    margin-top: 4px;
+  }
+  .level-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-soft));
+    transition: width 0.5s ease;
+  }
+  .level-bar-text {
+    position: absolute;
+    inset: 0;
+    text-align: center;
+    font-size: 0.75em;
+    line-height: 18px;
+    color: #000;
+    font-weight: bold;
+    text-shadow: 0 0 2px #fff;
+  }
+  .avatar-customize-btn {
+    width: 100%;
+    margin-top: 6px;
+  }
+  /* Stats panel */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .stat-box {
+    background: rgba(255,215,0,0.08);
+    border: 1px solid rgba(255,215,0,0.5);
+    padding: 10px 6px;
+    border-radius: 5px;
+    text-align: center;
+  }
+  .stat-box .num { font-size: 1.6em; color: var(--gold); font-weight: bold; }
+  .stat-box .label { font-size: 0.65em; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-box.streak { background: rgba(253,203,110,0.1); border-color: var(--orange); }
+  .stat-box.streak .num { color: var(--orange); }
+  .stat-box.level { background: rgba(162,155,254,0.1); border-color: var(--purple); }
+  .stat-box.level .num { color: var(--purple); }
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab {
+    flex: 1;
+    min-width: 90px;
+    padding: 10px 8px;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid #555;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 5px 5px 0 0;
+    text-align: center;
+    font-family: inherit;
+    font-size: 0.85em;
+    transition: all 0.18s;
+  }
+  .tab:hover { color: #fff; border-color: #888; }
+  .tab.active { background: rgba(255,215,0,0.15); border-color: var(--gold); color: var(--gold); }
+  .tab-content { display: none; animation: fadeIn 0.25s; }
+  .tab-content.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  /* Goals */
+  .add-goal-form {
+    background: rgba(0,0,0,0.3);
+    padding: 14px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .form-row input, .form-row select, .form-row textarea {
+    padding: 8px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 3px;
+    font-family: inherit;
+  }
+  .subgoals-section { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #555; }
+  .subgoal-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 6px; }
+  .subgoal-row input {
+    padding: 6px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.85em;
+  }
+  button {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: all 0.18s;
+  }
+  button:hover { background: var(--gold-soft); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button.small { padding: 4px 8px; font-size: 0.8em; }
+  button.tiny { padding: 2px 6px; font-size: 0.75em; }
+  button.danger { background: var(--red); color: #fff; }
+  button.secondary { background: #555; color: #fff; }
+  button.success { background: var(--green); color: #fff; }
+  /* Goal list */
+  .goal-card {
+    background: rgba(0,0,0,0.4);
+    border-left: 4px solid var(--gold);
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 0 5px 5px 0;
+    transition: all 0.2s;
+  }
+  .goal-card:hover { background: rgba(0,0,0,0.55); }
+  .goal-card.done { opacity: 0.55; border-left-color: var(--green); }
+  .goal-card.priority-high { border-left-color: var(--red); }
+  .goal-card.priority-low { border-left-color: #888; }
+  .goal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+  .goal-title { font-size: 1.05em; font-weight: bold; }
+  .goal-meta { font-size: 0.75em; color: var(--text-dim); margin-top: 2px; }
+  .goal-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 0.7em;
+    margin-right: 4px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid #555;
+  }
+  .goal-tag.cat-Health { background: rgba(0,184,148,0.2); border-color: var(--green); color: var(--green); }
+  .goal-tag.cat-Work { background: rgba(9,132,227,0.2); border-color: var(--blue); color: var(--blue); }
+  .goal-tag.cat-Learning { background: rgba(162,155,254,0.2); border-color: var(--purple); color: var(--purple); }
+  .goal-tag.cat-Creative { background: rgba(232,67,147,0.2); border-color: var(--pink); color: var(--pink); }
+  .goal-tag.cat-Social { background: rgba(253,203,110,0.2); border-color: var(--orange); color: var(--orange); }
+  .goal-tag.cat-Other { background: rgba(149,165,166,0.2); border-color: #95a5a6; color: #95a5a6; }
+  .goal-tag.pri-High { background: rgba(214,48,49,0.2); border-color: var(--red); color: var(--red); }
+  .goal-tag.pri-Med { background: rgba(255,215,0,0.15); border-color: var(--gold); color: var(--gold); }
+  .goal-tag.pri-Low { background: rgba(136,136,136,0.15); border-color: #888; color: #aaa; }
+  .goal-reward { color: var(--gold); font-size: 0.85em; }
+  .progress-bar { background: var(--bg-2); height: 8px; border-radius: 4px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { background: linear-gradient(90deg, var(--gold), var(--gold-soft)); height: 100%; transition: width 0.4s; }
+  .subgoal-list { margin: 8px 0 0 15px; padding-left: 10px; border-left: 2px dotted #555; }
+  .subgoal-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.85em; }
+  .subgoal-item.done { text-decoration: line-through; opacity: 0.5; }
+  .subgoal-item input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
+  .goal-actions { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+  .goal-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .goal-filters select, .goal-filters input {
+    padding: 6px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.85em;
+  }
+  /* Pixel art eggs */
+  .egg-svg {
+    display: block;
+    margin: 0 auto 4px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  .egg-svg.small { width: 36px; height: 46px; }
+  .egg-svg.big { width: 52px; height: 70px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+  .egg-svg.huge { width: 70px; height: 96px; filter: drop-shadow(0 0 12px var(--gold)); }
+  .egg-svg.modal-egg { width: 110px; height: 150px; }
+  .accessory-svg {
+    display: block;
+    margin: 0 auto 6px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    width: 56px;
+    height: 56px;
+  }
+  .accessory-svg.modal-large { width: 110px; height: 110px; }
+  /* Eggs */
+  .egg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+  }
+  .egg-card {
+    background: rgba(0,0,0,0.3);
+    border: 2px solid #555;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .egg-card:hover { transform: translateY(-3px) rotate(-3deg); border-color: var(--gold); }
+  .egg-emoji { font-size: 3em; display: block; }
+  .egg-card.small .egg-emoji { font-size: 2.2em; }
+  .egg-card.huge .egg-emoji { font-size: 4em; filter: drop-shadow(0 0 10px var(--gold)); }
+  .egg-card.huge { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,215,0,0.4); }
+  .egg-card.big { border-color: #aaa; }
+  .egg-label { font-size: 0.75em; color: var(--text-dim); margin-top: 5px; }
+  /* Inventory */
+  .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .item-card {
+    background: rgba(0,0,0,0.3);
+    border: 2px solid #555;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .item-card:hover { transform: translateY(-2px); }
+  .item-card.common { border-color: #95a5a6; }
+  .item-card.uncommon { border-color: var(--green); }
+  .item-card.rare { border-color: var(--blue); }
+  .item-card.epic { border-color: var(--purple); }
+  .item-card.legendary { border-color: var(--orange); box-shadow: 0 0 12px var(--orange); }
+  .item-card.mythic { border-color: var(--pink); box-shadow: 0 0 18px var(--pink); animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 18px var(--pink); }
+    50% { box-shadow: 0 0 30px var(--pink), 0 0 5px #fff; }
+  }
+  .item-card.equipped::after {
+    content: '✓';
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: var(--green);
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    line-height: 18px;
+    font-size: 0.75em;
+    font-weight: bold;
+  }
+  .item-emoji { font-size: 2.5em; }
+  .item-name { font-size: 0.85em; margin-top: 5px; font-weight: bold; }
+  .item-rarity { font-size: 0.7em; text-transform: uppercase; letter-spacing: 1px; }
+  .item-rarity.common { color: #95a5a6; }
+  .item-rarity.uncommon { color: var(--green); }
+  .item-rarity.rare { color: var(--blue); }
+  .item-rarity.epic { color: var(--purple); }
+  .item-rarity.legendary { color: var(--orange); }
+  .item-rarity.mythic { color: var(--pink); }
+  .inv-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .inv-tab {
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #555;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.8em;
+  }
+  .inv-tab.active { background: rgba(255,215,0,0.15); border-color: var(--gold); color: var(--gold); }
+  /* Warehouse */
+  #warehouseCanvas {
+    width: 100%;
+    max-width: 100%;
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    image-rendering: pixelated;
+    background: #1a1a2e;
+    display: block;
+    margin: 0 auto;
+    cursor: crosshair;
+  }
+  .warehouse-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: var(--text-dim);
+    font-size: 0.85em;
+  }
+  .warehouse-info { padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; margin-bottom: 10px; font-size: 0.9em; }
+  /* Stats tab */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 800px) { .stats-grid { grid-template-columns: 1fr; } }
+  .heatmap {
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    gap: 3px;
+    margin-top: 8px;
+  }
+  .heat-cell {
+    aspect-ratio: 1;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    position: relative;
+  }
+  .heat-cell.lvl-1 { background: rgba(255,215,0,0.25); }
+  .heat-cell.lvl-2 { background: rgba(255,215,0,0.5); }
+  .heat-cell.lvl-3 { background: rgba(255,215,0,0.75); }
+  .heat-cell.lvl-4 { background: var(--gold); box-shadow: 0 0 4px var(--gold); }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px dotted #444;
+    font-size: 0.9em;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 12px;
+  }
+  .breakdown-bar-fill { height: 100%; background: var(--gold); }
+  /* Achievements */
+  .achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .achievement {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #555;
+    padding: 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0.5;
+  }
+  .achievement.unlocked { opacity: 1; border-color: var(--gold); background: rgba(255,215,0,0.08); }
+  .achievement-icon { font-size: 2em; }
+  .achievement-info { flex: 1; }
+  .achievement-name { font-size: 0.9em; font-weight: bold; }
+  .achievement-desc { font-size: 0.75em; color: var(--text-dim); }
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: linear-gradient(135deg, var(--bg-2), var(--bg-3));
+    border: 3px solid var(--gold);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 40px rgba(255,215,0,0.5);
+  }
+  .modal.wide { max-width: 700px; }
+  .modal h2 { color: var(--gold); margin-bottom: 10px; }
+  .modal h3 { color: var(--gold-soft); margin: 12px 0 8px; }
+  .modal .reveal-emoji { font-size: 5em; margin: 15px 0; display: inline-block; }
+  .hatching { animation: shake 0.4s infinite; }
+  @keyframes shake {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+  }
+  .empty-state { text-align: center; padding: 30px; color: #777; }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--gold);
+    color: #000;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    transform: translateX(420px);
+    transition: transform 0.3s;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 90vw;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.achievement { background: var(--purple); color: #fff; }
+  .toast.levelup { background: var(--orange); color: #000; }
+  .toast button { padding: 4px 8px; font-size: 0.8em; }
+  /* Avatar customizer modal */
+  .customizer {
+    display: grid;
+    grid-template-columns: 256px 1fr;
+    gap: 20px;
+    text-align: left;
+  }
+  @media (max-width: 700px) {
+    .customizer { grid-template-columns: 1fr; }
+    .top-bar { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    h1 { font-size: 1.8em; }
+  }
+  .customizer canvas {
+    width: 256px; height: 256px;
+    image-rendering: pixelated;
+    background: linear-gradient(180deg, #2a2a4e 0%, #1a1a3e 100%);
+    border: 2px solid #555;
+    border-radius: 8px;
+    margin: 0 auto;
+  }
+  .customizer-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .customizer-options label { font-size: 0.78em; color: var(--text-dim); display: block; margin-bottom: 2px; }
+  .customizer-options select, .customizer-options input {
+    width: 100%;
+    padding: 5px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.85em;
+  }
+  /* Confetti / particles */
+  #fxCanvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 150;
+  }
+  /* Settings */
+  .settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #333;
+  }
+  .settings-row:last-child { border: none; }
+  .switch { position: relative; width: 44px; height: 22px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #555; border-radius: 22px; transition: 0.3s;
+  }
+  .switch .slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px;
+    left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s;
+  }
+  .switch input:checked + .slider { background: var(--gold); }
+  .switch input:checked + .slider:before { transform: translateX(22px); }
+  .icon-btn {
+    background: transparent;
+    color: var(--text-dim);
+    padding: 4px 8px;
+    border: 1px solid #555;
+    font-size: 0.85em;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  /* Marketplace */
+  .trade-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #444;
+    border-radius: 6px;
+  }
+  .trade-row.trade-down {
+    background: rgba(0,0,0,0.18);
+    border-color: #333;
+    opacity: 0.85;
+  }
+  .trade-from, .trade-to { text-align: center; }
+  .trade-emoji { font-size: 1.6em; display: block; }
+  .trade-label { font-size: 0.75em; color: var(--text-dim); margin-top: 2px; }
+  .trade-arrow { font-size: 1.5em; color: var(--gold); }
+  .trade-action { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .trade-action button { white-space: nowrap; }
+  .qty-input {
+    width: 50px;
+    padding: 4px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.85em;
+  }
+  /* Duplicate trade-in rows */
+  .dupe-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid #333;
+    border-radius: 5px;
+  }
+  .dupe-row:hover { background: rgba(0,0,0,0.4); }
+  .dupe-emoji { font-size: 1.6em; flex-shrink: 0; }
+  .dupe-info { flex: 1; min-width: 0; }
+  .dupe-name { font-size: 0.9em; }
+  .dupe-meta { font-size: 0.75em; color: var(--text-dim); margin-top: 2px; }
+  @media (max-width: 600px) {
+    .trade-row { grid-template-columns: 1fr 1fr; }
+    .trade-arrow { display: none; }
+    .trade-action { grid-column: 1 / -1; align-items: stretch; }
+  }
+  .marketplace-prompt {
+    position: absolute;
+    background: var(--gold);
+    color: #000;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: bold;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    animation: bob 0.8s infinite ease-in-out;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translate(-50%, -100%); }
+    50% { transform: translate(-50%, -110%); }
+  }
+  @keyframes clashHit {
+    0% { transform: scale(0.5); opacity: 0; }
+    40% { transform: scale(2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes clashLose {
+    0% { transform: scale(1) rotate(0); filter: brightness(1); }
+    50% { transform: scale(1.1) rotate(15deg); filter: brightness(2); }
+    100% { transform: scale(0.3) rotate(-180deg); filter: brightness(0.3); opacity: 0.3; }
+  }
+  /* ===== SUPER DUPER SIMPLE MODE ===== */
+  .simple-mode-bar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 8px 16px;
+    display: flex;
+    justify-content: flex-end;
+    border-bottom: 1px solid rgba(255,215,0,0.2);
+  }
+  .simple-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.85em;
+    color: var(--text-dim);
+  }
+  .simple-mode-switch:hover { color: #fff; }
+  .simple-mode-switch input { display: none; }
+  .simple-mode-track {
+    width: 40px;
+    height: 20px;
+    background: #555;
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .simple-mode-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .simple-mode-switch input:checked + .simple-mode-track { background: var(--gold); }
+  .simple-mode-switch input:checked + .simple-mode-track .simple-mode-thumb {
+    transform: translateX(20px);
+    background: #fff8b8;
+  }
+  .simple-mode-label { font-weight: bold; letter-spacing: 0.5px; }
+
+  .simple-mode-view {
+    display: none;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse at top, rgba(255,215,0,0.04), transparent 60%),
+      linear-gradient(180deg, #2a3242 0%, #1a1f2e 100%);
+    padding: 30px 12px 60px;
+  }
+  body.simple-mode .app { display: none !important; }
+  body.simple-mode .simple-mode-view { display: block; }
+  body.simple-mode .simple-mode-bar {
+    background: rgba(0,0,0,0.85);
+    border-bottom-color: var(--gold);
+  }
+  body.simple-mode .simple-mode-switch { color: var(--gold); }
+
+  .legal-pad-wrap {
+    max-width: 580px;
+    margin: 0 auto;
+    position: relative;
+    transform: rotate(-0.4deg);
+  }
+  .legal-pad-binding {
+    background: linear-gradient(180deg, #b8763d, #8b5a2b);
+    height: 28px;
+    border-radius: 6px 6px 0 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 14px;
+    border: 1px solid #5d3a1a;
+    border-bottom: 3px solid #5d3a1a;
+  }
+  .legal-pad-binding .hole {
+    width: 12px;
+    height: 12px;
+    background: radial-gradient(circle, #1a1a1a 60%, #333 100%);
+    border-radius: 50%;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+  }
+  .legal-pad {
+    background: #fff8a8;
+    background-image:
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 28px,
+        rgba(102, 153, 204, 0.7) 28px,
+        rgba(102, 153, 204, 0.7) 29px,
+        transparent 29px,
+        transparent 36px
+      );
+    background-position: 0 52px;
+    background-repeat: repeat;
+    border: 1px solid #e6c700;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow:
+      0 8px 24px rgba(0,0,0,0.5),
+      inset 0 0 60px rgba(212, 175, 55, 0.15);
+    padding: 12px 28px 36px 80px;
+    position: relative;
+    min-height: 600px;
+    color: #2c1810;
+    font-family: 'Caveat', 'Comic Sans MS', 'Marker Felt', cursive;
+  }
+  /* Red vertical margin line */
+  .legal-pad::before {
+    content: '';
+    position: absolute;
+    left: 60px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(220, 50, 50, 0.6);
+    box-shadow: 1px 0 0 rgba(220,50,50,0.4);
+  }
+  .legal-pad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 36px;
+    border-bottom: 1px dashed rgba(0,0,0,0.15);
+    margin-bottom: 4px;
+  }
+  .legal-pad-title {
+    font-size: 1.6em;
+    font-weight: bold;
+    color: #5a2a1a;
+    letter-spacing: 2px;
+    text-decoration: underline;
+    text-decoration-style: wavy;
+  }
+  .legal-pad-date {
+    font-size: 1em;
+    color: #5a2a1a;
+    opacity: 0.7;
+  }
+  .legal-pad-lines {
+    margin-top: 0;
+  }
+  .pad-row {
+    display: flex;
+    align-items: flex-end;
+    height: 36px;
+    line-height: 1;
+    padding-bottom: 4px;
+    font-size: 1.4em;
+    color: #2c1810;
+    gap: 10px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .pad-row.sub {
+    padding-left: 32px;
+    font-size: 1.25em;
+  }
+  .pad-row .pad-check {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #2c1810;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.2);
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .pad-row:hover .pad-check {
+    background: rgba(255,255,255,0.5);
+    transform: scale(1.05);
+  }
+  .pad-row.done .pad-check {
+    background: #2c1810;
+    color: #fff8a8;
+  }
+  .pad-row.done .pad-check::after {
+    content: '✓';
+    font-size: 1.4em;
+    line-height: 1;
+    font-weight: bold;
+    transform: rotate(-8deg) translate(0, -1px);
+  }
+  .pad-row.done .pad-text {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: rgba(220,50,50,0.7);
+    opacity: 0.55;
+  }
+  .pad-text { flex: 1; min-width: 0; word-wrap: break-word; line-height: 1.2; padding-top: 2px; }
+  .pad-reward { color: #b8860b; font-size: 0.7em; margin-left: 8px; opacity: 0.6; }
+  .pad-row.daily .pad-text::before {
+    content: '🔁 ';
+    font-size: 0.7em;
+  }
+  .add-simple-goal {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    height: 36px;
+    padding-bottom: 4px;
+    margin-top: 0;
+  }
+  .checkbox-placeholder {
+    font-size: 1.5em;
+    color: rgba(0,0,0,0.3);
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .add-simple-goal input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    font-family: 'Caveat', 'Comic Sans MS', cursive;
+    font-size: 1.4em;
+    color: #2c1810;
+    padding: 0 2px 2px;
+    outline: none;
+    line-height: 1;
+    height: 28px;
+  }
+  .add-simple-goal input::placeholder {
+    color: rgba(0,0,0,0.4);
+    font-style: italic;
+  }
+  .add-pad-btn {
+    background: #2c1810;
+    color: #fff8a8;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 1.2em;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    line-height: 1;
+  }
+  .add-pad-btn:hover { background: #5a2a1a; transform: scale(1.08); }
+  .legal-pad-footer {
+    margin-top: 28px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(0,0,0,0.15);
+    font-size: 1em;
+    color: #5a2a1a;
+    text-align: center;
+    opacity: 0.7;
+  }
+  .pad-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: rgba(0,0,0,0.5);
+    font-size: 1.2em;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<!-- Super Duper Simple Mode toggle (always visible) -->
+<div class="simple-mode-bar">
+  <label class="simple-mode-switch">
+    <input type="checkbox" id="simpleModeToggle">
+    <span class="simple-mode-track"><span class="simple-mode-thumb"></span></span>
+    <span class="simple-mode-label">🎯 Super Duper Simple Mode</span>
+  </label>
+</div>
+
+<!-- Simple Mode View -->
+<div class="simple-mode-view" id="simpleModeView">
+  <div class="legal-pad-wrap">
+    <div class="legal-pad-binding">
+      <span class="hole"></span><span class="hole"></span><span class="hole"></span>
+      <span class="hole"></span><span class="hole"></span><span class="hole"></span>
+      <span class="hole"></span><span class="hole"></span>
+    </div>
+    <div class="legal-pad">
+      <div class="legal-pad-header">
+        <span class="legal-pad-title">TO-DO</span>
+        <span class="legal-pad-date" id="legalPadDate"></span>
+      </div>
+      <div class="legal-pad-lines" id="simpleGoalsList"></div>
+      <div class="add-simple-goal">
+        <span class="checkbox-placeholder">☐</span>
+        <input type="text" id="simpleNewGoal" placeholder="write a new goal..." onkeydown="if(event.key==='Enter')addSimpleGoal()">
+        <button class="add-pad-btn" onclick="addSimpleGoal()">+</button>
+      </div>
+      <div class="legal-pad-footer">
+        <span id="simpleStashLine"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <h1>🥚 DINGUS EGGS 🥚</h1>
+  <p class="tagline">Crush your goals. Hatch your future. <span id="avatarNameDisplay"></span></p>
+
+  <div class="top-bar">
+    <!-- AVATAR PANEL -->
+    <div class="panel">
+      <h2>Your Avatar</h2>
+      <div class="avatar-display">
+        <div class="avatar-frame" id="avatarFrame">
+          <canvas id="avatarCanvas" width="64" height="64"></canvas>
+        </div>
+        <div style="width:100%;">
+          <div style="display:flex; justify-content:space-between; font-size:0.8em; color:var(--text-dim); margin-bottom:2px;">
+            <span>Level <span id="levelNum">1</span></span>
+            <span><span id="xpNow">0</span>/<span id="xpNeed">100</span> XP</span>
+          </div>
+          <div class="level-bar"><div class="level-bar-fill" id="xpFill" style="width:0%;"></div><div class="level-bar-text" id="xpText">0 / 100</div></div>
+        </div>
+        <button class="avatar-customize-btn" onclick="openCustomizer()">🎨 Customize Avatar</button>
+      </div>
+    </div>
+
+    <!-- STATS PANEL -->
+    <div class="panel">
+      <h2>Your Stash</h2>
+      <div class="stats">
+        <div class="stat-box">
+          <div class="num" id="smallEggs">0</div>
+          <div class="label">🥚 Small</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="bigEggs">0</div>
+          <div class="label">🥚 Big</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="hugeEggs">0</div>
+          <div class="label">🥚 Huge</div>
+        </div>
+        <div class="stat-box streak">
+          <div class="num" id="streak">0</div>
+          <div class="label">🔥 Streak</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="goalsCompleted">0</div>
+          <div class="label">Goals</div>
+        </div>
+        <div class="stat-box level">
+          <div class="num" id="totalItems">0</div>
+          <div class="label">Items</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="goals">📋 Goals</button>
+    <button class="tab" data-tab="eggs">🥚 Eggs</button>
+    <button class="tab" data-tab="inventory">🎒 Inventory</button>
+    <button class="tab" data-tab="warehouse">🏠 The Hatchery</button>
+    <button class="tab" data-tab="stats">📊 Stats</button>
+    <button class="tab" data-tab="achievements">🏆 Achievements</button>
+    <button class="tab" data-tab="settings">⚙️ Settings</button>
+  </div>
+
+  <!-- GOALS TAB -->
+  <div class="tab-content active" id="tab-goals">
+    <div class="panel">
+      <h2 id="goalFormTitle">Add a Goal</h2>
+      <div class="add-goal-form">
+        <div class="form-row">
+          <input type="text" id="goalTitle" placeholder="What do you want to crush?">
+          <select id="goalType">
+            <option value="onetime">One-time</option>
+            <option value="daily">Daily habit</option>
+          </select>
+          <select id="goalSize">
+            <option value="small">Small (1🥚)</option>
+            <option value="medium" selected>Medium (3🥚)</option>
+            <option value="big">Big (5🥚+1🥚🥚)</option>
+            <option value="huge">Huge (3🥚🥚+1🥚🥚🥚)</option>
+          </select>
+          <select id="goalCategory">
+            <option value="Health">🏃 Health</option>
+            <option value="Work">💼 Work</option>
+            <option value="Learning">📚 Learning</option>
+            <option value="Creative">🎨 Creative</option>
+            <option value="Social">👥 Social</option>
+            <option value="Other">⭐ Other</option>
+          </select>
+          <select id="goalPriority">
+            <option value="Low">Low pri</option>
+            <option value="Med" selected>Med pri</option>
+            <option value="High">High pri</option>
+          </select>
+        </div>
+        <div class="subgoals-section" id="subgoalsSection">
+          <div style="font-size: 0.85em; color: var(--text-dim); margin-bottom: 6px;">Sub-goals (optional, each gives 1 🥚 + 5 XP):</div>
+          <div id="subgoalsList"></div>
+          <button class="small secondary" onclick="addSubgoalInput()">+ Add Sub-goal</button>
+        </div>
+        <div style="margin-top: 12px; display:flex; gap:8px;">
+          <button onclick="saveGoal()" id="saveGoalBtn">Add Goal</button>
+          <button class="secondary" onclick="cancelEdit()" id="cancelEditBtn" style="display:none;">Cancel</button>
+        </div>
+      </div>
+      <div class="goal-filters">
+        <span style="color:var(--text-dim); font-size:0.85em;">Filter:</span>
+        <select id="filterCategory" onchange="renderGoals()">
+          <option value="">All categories</option>
+          <option>Health</option><option>Work</option><option>Learning</option>
+          <option>Creative</option><option>Social</option><option>Other</option>
+        </select>
+        <select id="filterStatus" onchange="renderGoals()">
+          <option value="all">All goals</option>
+          <option value="open">Open only</option>
+          <option value="done">Completed</option>
+        </select>
+        <select id="sortBy" onchange="renderGoals()">
+          <option value="created">Newest first</option>
+          <option value="priority">By priority</option>
+          <option value="alpha">A-Z</option>
+        </select>
+      </div>
+      <div id="goalsList"></div>
+    </div>
+  </div>
+
+  <!-- EGGS TAB -->
+  <div class="tab-content" id="tab-eggs">
+    <div class="panel">
+      <h2>Your Egg Collection — Click to Hatch!</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <span id="eggCountSummary" style="color:var(--text-dim); font-size:0.9em;"></span>
+        <button id="hatchAllBtn" onclick="hatchAllEggs()">⚡ Hatch All Eggs</button>
+      </div>
+      <div id="eggsList" class="egg-grid">
+        <div class="empty-state">No eggs yet — go crush some goals!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVENTORY TAB -->
+  <div class="tab-content" id="tab-inventory">
+    <div class="panel">
+      <h2>Hatched Items</h2>
+      <p style="color:var(--text-dim); font-size:0.85em; margin-bottom:10px;">Click items to equip — pets, hats, weapons, and backgrounds appear in The Hatchery.</p>
+      <div class="inv-tabs" id="invTabs">
+        <button class="inv-tab active" data-cat="all">All</button>
+        <button class="inv-tab" data-cat="pet">🐾 Pets</button>
+        <button class="inv-tab" data-cat="accessory">🎩 Accessories</button>
+        <button class="inv-tab" data-cat="weapon">⚔️ Weapons</button>
+        <button class="inv-tab" data-cat="vehicle">🚀 Vehicles</button>
+        <button class="inv-tab" data-cat="background">🌄 Backgrounds</button>
+        <button class="inv-tab" data-cat="frame">🖼️ Frames</button>
+        <button class="inv-tab" data-cat="item">✨ Misc</button>
+      </div>
+      <div id="inventoryList" class="inv-grid">
+        <div class="empty-state">Hatch some eggs to see what you got!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HATCHERY TAB (formerly Warehouse) -->
+  <div class="tab-content" id="tab-warehouse">
+    <div class="panel">
+      <h2>The Hatchery</h2>
+      <div class="warehouse-info">
+        Walk around with <strong>WASD</strong> or <strong>arrow keys</strong>. Equipped items appear here, pets follow you. Doors on the back wall: <strong>🏆 Trophies</strong> (left), <strong>🔧 Garage</strong> (right), <strong>⚔️ Colosseum</strong> (center). The gold stall in the middle is the <strong>Egg Marketplace</strong>. Walk close + press <strong>E</strong>, or click directly.
+      </div>
+      <canvas id="warehouseCanvas" width="600" height="400"></canvas>
+      <div class="warehouse-controls">
+        <span id="warehouseStatus">Use the Inventory tab to equip items.</span>
+        <span>Equipped pet: <span id="equippedPet" style="color:var(--gold);">none</span></span>
+        <button class="small secondary" onclick="openMarketplace()">🏪 Open Marketplace</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS TAB -->
+  <div class="tab-content" id="tab-stats">
+    <div class="panel">
+      <h2>Your Journey</h2>
+      <div class="stats-grid">
+        <div>
+          <h3 style="color:var(--gold-soft); font-size:1em; margin-bottom:8px;">Last 60 Days — Activity Heatmap</h3>
+          <div class="heatmap" id="heatmap"></div>
+          <p style="font-size:0.75em; color:var(--text-dim); margin-top:8px;">Each square = 1 day. Brighter = more goals completed.</p>
+        </div>
+        <div>
+          <h3 style="color:var(--gold-soft); font-size:1em; margin-bottom:8px;">Goals by Category</h3>
+          <div id="categoryBreakdown"></div>
+          <h3 style="color:var(--gold-soft); font-size:1em; margin: 16px 0 8px;">Items by Rarity</h3>
+          <div id="rarityBreakdown"></div>
+        </div>
+      </div>
+      <div style="margin-top:20px;">
+        <h3 style="color:var(--gold-soft); font-size:1em; margin-bottom:8px;">Lifetime Stats</h3>
+        <div id="lifetimeStats" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS TAB -->
+  <div class="tab-content" id="tab-achievements">
+    <div class="panel">
+      <h2>Achievements</h2>
+      <p style="color:var(--text-dim); font-size:0.85em; margin-bottom:12px;">Unlock badges by hitting milestones. Each unlock gives you bonus XP.</p>
+      <div id="achievementsList" class="achievements-grid"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="tab-content" id="tab-settings">
+    <div class="panel">
+      <h2>Settings</h2>
+      <div class="settings-row">
+        <div>
+          <div>Sound effects</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">Click, complete, hatch, level-up audio</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="soundToggle"><span class="slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div>Confetti & particles</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">Celebrate completions visually</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="fxToggle"><span class="slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div>Export save data</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">Download a JSON backup of your progress</div>
+        </div>
+        <button class="secondary" onclick="exportData()">📤 Export</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div>Import save data</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">Restore from a backup file (overwrites current progress)</div>
+        </div>
+        <button class="secondary" onclick="document.getElementById('importFile').click()">📥 Import</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+      </div>
+      <div class="settings-row">
+        <div>
+          <div style="color:var(--red);">Reset everything</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">Wipe all goals, eggs, items, achievements. Cannot be undone.</div>
+        </div>
+        <button class="danger" onclick="resetAll()">🗑️ Reset</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div>Show onboarding tour</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">See the welcome guide again</div>
+        </div>
+        <button class="secondary" onclick="showOnboarding()">👋 Show</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COLOSSEUM MATCH MODAL -->
+<div class="modal-overlay" id="colosseumModal">
+  <div class="modal wide" id="colosseumModalInner">
+    <div id="colosseumPhase"></div>
+  </div>
+</div>
+
+<!-- HATCH ALL SUMMARY MODAL -->
+<div class="modal-overlay" id="hatchAllModal">
+  <div class="modal wide">
+    <h2>🎉 Hatch All Results 🎉</h2>
+    <div id="hatchAllSummary" style="text-align:left; max-height:60vh; overflow-y:auto; margin: 14px 0;"></div>
+    <button onclick="closeHatchAllModal()">Awesome!</button>
+  </div>
+</div>
+
+<!-- HATCH MODAL -->
+<div class="modal-overlay" id="hatchModal">
+  <div class="modal">
+    <h2 id="hatchTitle">Hatching...</h2>
+    <div class="reveal-emoji hatching" id="hatchEmoji">🥚</div>
+    <div id="hatchResult" style="display:none;">
+      <div class="item-rarity" id="hatchRarity"></div>
+      <h3 id="hatchName"></h3>
+      <p id="hatchDesc" style="margin: 10px 0; color: var(--text-dim); font-size: 0.9em;"></p>
+    </div>
+    <button onclick="closeHatchModal()" style="margin-top: 15px;">Awesome!</button>
+  </div>
+</div>
+
+<!-- AVATAR CUSTOMIZER MODAL -->
+<div class="modal-overlay" id="customizerModal">
+  <div class="modal wide">
+    <h2>Design Your Avatar</h2>
+    <div class="customizer">
+      <div>
+        <canvas id="customizerCanvas" width="64" height="64"></canvas>
+        <div style="margin-top: 10px;">
+          <label style="font-size:0.8em; color:var(--text-dim);">Name</label>
+          <input type="text" id="customAvatarName" placeholder="Your hero" maxlength="20"
+                 style="width:100%; padding:5px; background:var(--bg-2); color:var(--text); border:1px solid #555; border-radius:3px; font-family:inherit;">
+        </div>
+      </div>
+      <div class="customizer-options" id="customizerOptions"></div>
+    </div>
+    <div style="margin-top: 18px; display:flex; gap:8px; justify-content:center;">
+      <button onclick="randomizeAvatar()" class="secondary">🎲 Randomize</button>
+      <button onclick="closeCustomizer()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING MODAL -->
+<div class="modal-overlay" id="onboardingModal">
+  <div class="modal wide">
+    <h2>Welcome to Dingus Eggs! 🥚</h2>
+    <div style="text-align:left; margin: 14px 0; line-height: 1.6;">
+      <p><strong>The basics:</strong></p>
+      <ol style="margin: 10px 0 10px 20px;">
+        <li>Add goals — one-time projects or daily habits.</li>
+        <li>Complete them to earn Dingus Eggs (small, big, huge).</li>
+        <li>Hatch eggs to win pets, weapons, vehicles, accessories. Bigger eggs = better odds at rare items.</li>
+        <li>Equip items to make them appear in <strong>The Hatchery</strong> — your living warehouse where your avatar walks around with their loot.</li>
+        <li>Visit the <strong>Egg Marketplace</strong> in The Hatchery to trade up small eggs for bigger ones with better drop odds.</li>
+        <li>Customize your chibi avatar — face, hair, outfit, all of it.</li>
+        <li>Build streaks (daily habits 7 days running = bonus big egg).</li>
+        <li>Level up by earning XP. Unlock achievements along the way.</li>
+      </ol>
+      <p style="color:var(--text-dim); font-size:0.9em; margin-top: 12px;">All data saves to your browser — refresh anytime, your progress sticks. Export a backup from Settings if you want.</p>
+    </div>
+    <button onclick="closeOnboarding()">Let's go!</button>
+  </div>
+</div>
+
+<!-- MARKETPLACE MODAL -->
+<div class="modal-overlay" id="marketplaceModal">
+  <div class="modal wide">
+    <h2>🏪 Egg Marketplace</h2>
+    <p style="color:var(--text-dim); font-size:0.9em; margin-bottom:14px;">
+      Trade up your eggs for bigger ones with better drop odds. Trading down loses value, so think carefully.
+    </p>
+    <div style="display:grid; grid-template-columns:1fr; gap:10px; text-align:left;">
+      <!-- Trade up: 5 small -> 1 big -->
+      <div class="trade-row">
+        <div class="trade-from"><span class="trade-emoji">🥚🥚🥚🥚🥚</span><div class="trade-label">5 Small Eggs</div></div>
+        <div class="trade-arrow">→</div>
+        <div class="trade-to"><span class="trade-emoji">🥚</span><div class="trade-label">1 Big Egg</div></div>
+        <div class="trade-action">
+          <div style="font-size:0.75em; color:var(--text-dim);">You have: <span id="ms-small-count">0</span> small</div>
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:0.75em; color:var(--text-dim);">×</span>
+            <input type="number" id="ms-qty-s5b1" min="1" value="1" class="qty-input">
+            <button class="small success" onclick="trade('s5b1')">Trade</button>
+          </div>
+        </div>
+      </div>
+      <!-- Trade up: 3 big -> 1 huge -->
+      <div class="trade-row">
+        <div class="trade-from"><span class="trade-emoji">🥚🥚🥚</span><div class="trade-label">3 Big Eggs</div></div>
+        <div class="trade-arrow">→</div>
+        <div class="trade-to"><span class="trade-emoji">🥚</span><div class="trade-label">1 Huge Egg</div></div>
+        <div class="trade-action">
+          <div style="font-size:0.75em; color:var(--text-dim);">You have: <span id="ms-big-count">0</span> big</div>
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:0.75em; color:var(--text-dim);">×</span>
+            <input type="number" id="ms-qty-b3h1" min="1" value="1" class="qty-input">
+            <button class="small success" onclick="trade('b3h1')">Trade</button>
+          </div>
+        </div>
+      </div>
+      <hr style="border-color:#444; margin: 6px 0;">
+      <p style="font-size:0.8em; color:var(--text-dim); text-align:center;">Need to break a bigger egg into smaller ones? You'll lose a little value:</p>
+      <!-- Trade down: 1 big -> 3 small -->
+      <div class="trade-row trade-down">
+        <div class="trade-from"><span class="trade-emoji">🥚</span><div class="trade-label">1 Big Egg</div></div>
+        <div class="trade-arrow">→</div>
+        <div class="trade-to"><span class="trade-emoji">🥚🥚🥚</span><div class="trade-label">3 Small Eggs</div></div>
+        <div class="trade-action">
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:0.75em; color:var(--text-dim);">×</span>
+            <input type="number" id="ms-qty-b1s3" min="1" value="1" class="qty-input">
+            <button class="small secondary" onclick="trade('b1s3')">Break</button>
+          </div>
+        </div>
+      </div>
+      <!-- Trade down: 1 huge -> 2 big -->
+      <div class="trade-row trade-down">
+        <div class="trade-from"><span class="trade-emoji">🥚</span><div class="trade-label">1 Huge Egg</div></div>
+        <div class="trade-arrow">→</div>
+        <div class="trade-to"><span class="trade-emoji">🥚🥚</span><div class="trade-label">2 Big Eggs</div></div>
+        <div class="trade-action">
+          <div style="font-size:0.75em; color:var(--text-dim);">You have: <span id="ms-huge-count">0</span> huge</div>
+          <div style="display:flex; gap:4px; align-items:center;">
+            <span style="font-size:0.75em; color:var(--text-dim);">×</span>
+            <input type="number" id="ms-qty-h1b2" min="1" value="1" class="qty-input">
+            <button class="small secondary" onclick="trade('h1b2')">Break</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr style="border-color:#444; margin: 18px 0 10px;">
+    <h3 style="color:var(--gold-soft); margin-bottom: 8px;">🔁 Trade In Duplicates</h3>
+    <p style="color:var(--text-dim); font-size:0.85em; margin-bottom: 10px;">
+      Got dupes? Cash them in for fresh eggs. Common→1🥚 · Uncommon→3🥚 · Rare→1🥚🥚 · Epic→2🥚🥚 · Legendary→1🥚🥚🥚 · Mythic→2🥚🥚🥚
+    </p>
+    <div id="duplicatesList" style="max-height: 280px; overflow-y: auto; text-align: left;"></div>
+    <div style="margin-top: 18px; display:flex; justify-content:center; gap:8px;">
+      <button class="secondary" onclick="closeMarketplace()">Close</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="fxCanvas"></canvas>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// DATA: items pool, drop rates, achievements, customization
+// ============================================================
+const ITEMS = {
+  common: [
+    { e: '🎩', n: 'Top Hat', d: 'Classy headwear', t: 'accessory' },
+    { e: '🧢', n: 'Baseball Cap', d: 'Casual vibes', t: 'accessory' },
+    { e: '👓', n: 'Glasses', d: 'Smart look', t: 'accessory' },
+    { e: '🦴', n: 'Bone', d: 'A simple bone', t: 'item' },
+    { e: '🪨', n: 'Pebble', d: 'Just a rock', t: 'item' },
+    { e: '🍎', n: 'Apple', d: 'Healthy snack', t: 'item' },
+    { e: '🐭', n: 'Pet Mouse', d: 'Tiny squeaky friend', t: 'pet' },
+    { e: '🐸', n: 'Pet Frog', d: 'Ribbits encouragingly', t: 'pet' },
+    { e: '🪙', n: 'Lucky Coin', d: 'A coin for fortune', t: 'item' },
+    { e: '🎁', n: 'Mystery Gift', d: 'Looks promising', t: 'item' },
+    { e: '🟤', n: 'Wood Frame', d: 'Rustic wooden border', t: 'frame', frameClass: 'wood' },
+    { e: '🏛️', n: 'Iron Frame', d: 'Sturdy industrial border', t: 'frame', frameClass: 'iron' },
+    { e: '🌰', n: 'Acorn', d: 'Tiny seed of potential', t: 'item' },
+    { e: '🍂', n: 'Fallen Leaf', d: 'Pretty in autumn', t: 'item' },
+    { e: '🐌', n: 'Pet Snail', d: 'Slow and steady wins', t: 'pet' },
+    { e: '🍄', n: 'Lucky Mushroom', d: 'Forest floor find', t: 'item' },
+    { e: '🪶', n: 'Feather', d: 'Light as a... well', t: 'item' },
+    { e: '🧦', n: 'Lucky Sock', d: 'Where did the other go?', t: 'accessory' },
+    { e: '🥯', n: 'Bagel', d: 'Carb-loaded breakfast', t: 'item' },
+    { e: '🪀', n: 'Yo-Yo', d: 'Round and round', t: 'item' },
+    { e: '🧶', n: 'Yarn Ball', d: 'For when you knit', t: 'item' },
+    { e: '🎈', n: 'Balloon', d: 'Floats your spirits', t: 'accessory' },
+    { e: '🦗', n: 'Pet Cricket', d: 'Chirpy companion', t: 'pet' },
+    { e: '🍪', n: 'Cookie', d: 'Definitely homemade', t: 'item' },
+    { e: '🗡️', n: 'Wooden Sword', d: 'Splintery but functional', t: 'weapon', power: 8 },
+  ],
+  uncommon: [
+    { e: '🎒', n: 'Backpack', d: 'Carry your dreams', t: 'accessory' },
+    { e: '🧣', n: 'Cool Scarf', d: 'Drip incoming', t: 'accessory' },
+    { e: '🐱', n: 'Pet Cat', d: 'Judgmental but loyal', t: 'pet' },
+    { e: '🐶', n: 'Pet Puppy', d: 'Will follow you anywhere', t: 'pet' },
+    { e: '🐰', n: 'Pet Rabbit', d: 'Hops with joy', t: 'pet' },
+    { e: '🌲', n: 'Forest Background', d: 'Peaceful woods', t: 'background' },
+    { e: '🏖️', n: 'Beach Background', d: 'Vacation vibes', t: 'background' },
+    { e: '🗡️', n: 'Iron Dagger', d: 'Sharp and reliable', t: 'weapon', power: 12 },
+    { e: '🛡️', n: 'Wooden Shield', d: 'Better than nothing', t: 'weapon', power: 10 },
+    { e: '🎸', n: 'Electric Guitar', d: 'Rock on', t: 'item' },
+    { e: '🥉', n: 'Bronze Frame', d: 'Patinated bronze trim', t: 'frame', frameClass: 'bronze' },
+    { e: '🥈', n: 'Silver Frame', d: 'Polished silver shine', t: 'frame', frameClass: 'silver' },
+    { e: '🐢', n: 'Pet Turtle', d: 'Wise old shell-friend', t: 'pet' },
+    { e: '🐹', n: 'Pet Hamster', d: 'Wheels never stop', t: 'pet' },
+    { e: '🐷', n: 'Pet Pig', d: 'Smarter than you think', t: 'pet' },
+    { e: '🪖', n: 'Helmet', d: 'Protect that noggin', t: 'accessory' },
+    { e: '🎺', n: 'Trumpet', d: 'Loud and brassy', t: 'item' },
+    { e: '🎷', n: 'Saxophone', d: 'Smooth jazz energy', t: 'item' },
+    { e: '🌻', n: 'Sunflower', d: 'Bright disposition', t: 'item' },
+    { e: '🪃', n: 'Boomerang', d: 'Always comes back', t: 'weapon', power: 14 },
+    { e: '🪓', n: 'Hand Axe', d: 'Chops well, hits harder', t: 'weapon', power: 13 },
+    { e: '🏞️', n: 'Riverside Background', d: 'Babbling brook serenity', t: 'background' },
+    { e: '🥋', n: 'Black Belt', d: 'Earned, not gifted', t: 'accessory' },
+    { e: '🛹', n: 'Skateboard', d: 'Cool kid energy', t: 'vehicle' },
+    { e: '✨', n: 'Mage Cap', d: 'Apprentice headwear', t: 'accessory', svgKey: 'mageCap', customDraw: 'mageCap' },
+    { e: '⚔️', n: 'Iron Sword', d: 'Heavy and reliable', t: 'weapon', power: 14 },
+  ],
+  rare: [
+    { e: '🐺', n: 'Pet Wolf', d: 'Lone wanderer companion', t: 'pet' },
+    { e: '🦊', n: 'Pet Fox', d: 'Sly and clever', t: 'pet' },
+    { e: '🦅', n: 'Pet Eagle', d: 'Soars above your goals', t: 'pet' },
+    { e: '⚔️', n: 'Steel Sword', d: 'Battle-tested blade', t: 'weapon', power: 22 },
+    { e: '🏹', n: 'Longbow', d: 'For the precise', t: 'weapon', power: 20 },
+    { e: '🏰', n: 'Castle Background', d: 'Live like royalty', t: 'background' },
+    { e: '🌃', n: 'City Background', d: 'Neon nights', t: 'background' },
+    { e: '🚲', n: 'Bicycle', d: 'Eco-friendly ride', t: 'vehicle' },
+    { e: '👑', n: 'Crown', d: 'You earned it', t: 'accessory' },
+    { e: '💎', n: 'Gemstone', d: 'Pure value', t: 'item' },
+    { e: '🥇', n: 'Gold Frame', d: 'Glowing gold trim', t: 'frame', frameClass: 'gold' },
+    { e: '🔷', n: 'Crystal Frame', d: 'Cut crystal sparkle', t: 'frame', frameClass: 'crystal' },
+    { e: '🐊', n: 'Pet Crocodile', d: 'Ancient apex predator', t: 'pet' },
+    { e: '🦔', n: 'Pet Hedgehog', d: 'Spiky but cuddly', t: 'pet' },
+    { e: '🦦', n: 'Pet Otter', d: 'Holds your hand while sleeping', t: 'pet' },
+    { e: '🛼', n: 'Roller Skates', d: 'Disco wheels', t: 'vehicle' },
+    { e: '🎤', n: 'Microphone', d: 'Take the stage', t: 'item' },
+    { e: '🎯', n: 'Bullseye Target', d: 'For practice', t: 'item' },
+    { e: '💼', n: 'Briefcase', d: 'Means business', t: 'accessory' },
+    { e: '⛏️', n: 'Pickaxe', d: 'Mine your way out', t: 'weapon', power: 18 },
+    { e: '🌉', n: 'Bridge Background', d: 'Crossing into new horizons', t: 'background' },
+    { e: '🎻', n: 'Violin', d: 'For dramatic moments', t: 'item' },
+    { e: '🪂', n: 'Parachute', d: 'Soft landings only', t: 'vehicle' },
+    { e: '🎀', n: 'Bow Tie', d: 'Distinguished look', t: 'accessory' },
+    { e: '✨', n: 'Witch Hat', d: 'Brewing trouble in style', t: 'accessory', svgKey: 'witchHat', customDraw: 'witchHat' },
+  ],
+  epic: [
+    { e: '🐻', n: 'Pet Newfoundland', d: 'Massive fluffy guardian', t: 'pet' },
+    { e: '🦁', n: 'Pet Lion', d: 'King of the jungle', t: 'pet' },
+    { e: '🐯', n: 'Pet Tiger', d: 'Majestic predator', t: 'pet' },
+    { e: '🦄', n: 'Pet Unicorn', d: 'Magical and rare', t: 'pet' },
+    { e: '🏎️', n: 'Sports Car', d: 'Vroom vroom', t: 'vehicle' },
+    { e: '🛥️', n: 'Speedboat', d: 'Cut through waves', t: 'vehicle' },
+    { e: '🪄', n: 'Magic Wand', d: 'Channel the arcane', t: 'weapon', power: 32 },
+    { e: '🌌', n: 'Galaxy Background', d: 'You contain multitudes', t: 'background' },
+    { e: '🎮', n: 'Game Controller', d: 'Master of pixels', t: 'item' },
+    { e: '🪞', n: 'Dragon Frame', d: 'Forged in dragonfire', t: 'frame', frameClass: 'dragon' },
+    { e: '🌠', n: 'Cosmic Frame', d: 'Shifting cosmic energy', t: 'frame', frameClass: 'cosmic' },
+    { e: '🦓', n: 'Pet Zebra', d: 'Striped majesty', t: 'pet' },
+    { e: '🦘', n: 'Pet Kangaroo', d: 'Hops with pocket included', t: 'pet' },
+    { e: '🦒', n: 'Pet Giraffe', d: 'Tallest friend', t: 'pet' },
+    { e: '🦏', n: 'Pet Rhino', d: 'Charges first, asks later', t: 'pet' },
+    { e: '🚤', n: 'Yacht', d: 'Luxury on the water', t: 'vehicle' },
+    { e: '🚂', n: 'Steam Train', d: 'Vintage rail power', t: 'vehicle' },
+    { e: '🪕', n: 'Banjo', d: 'Folk-music ferocity', t: 'item' },
+    { e: '💣', n: 'Throwing Bomb', d: 'Explosive impact', t: 'weapon', power: 28 },
+    { e: '🏔️', n: 'Mountain Background', d: 'Snow-capped grandeur', t: 'background' },
+    { e: '🏝️', n: 'Tropical Island Background', d: 'Pure paradise', t: 'background' },
+    { e: '🌟', n: 'Star Pendant', d: 'Wear your win', t: 'accessory' },
+    { e: '✨', n: 'Wizard Hat', d: 'Pointed and star-spangled', t: 'accessory', svgKey: 'wizardHat', customDraw: 'wizardHat' },
+    { e: '⚔️', n: 'Greatsword', d: 'Two-handed, devastating', t: 'weapon', power: 32 },
+  ],
+  legendary: [
+    { e: '🐉', n: 'Pet Dragon', d: 'A real dragon. Yes. A dragon.', t: 'pet' },
+    { e: '🔱', n: "Poseidon's Trident", d: 'Command the seas', t: 'weapon', power: 52 },
+    { e: '🚁', n: 'Helicopter', d: 'Sky is the limit', t: 'vehicle' },
+    { e: '🛸', n: 'UFO', d: 'Definitely yours now', t: 'vehicle' },
+    { e: '🦖', n: 'Pet T-Rex', d: 'Tiny arms, huge heart', t: 'pet' },
+    { e: '🐙', n: 'Pet Kraken', d: 'Eight times the love', t: 'pet' },
+    { e: '🌋', n: 'Volcano Background', d: 'Power incarnate', t: 'background' },
+    { e: '🌅', n: 'Phoenix Frame', d: 'Burning rebirth aura', t: 'frame', frameClass: 'phoenix' },
+    { e: '💍', n: 'Diamond Frame', d: 'Blinding diamond gleam', t: 'frame', frameClass: 'diamond' },
+    { e: '🦣', n: 'Pet Mammoth', d: 'Ice-age titan', t: 'pet' },
+    { e: '🐲', n: 'Pet Wyvern', d: "Dragon's fierce cousin", t: 'pet' },
+    { e: '🦂', n: 'Pet Manticore', d: 'Lion body, scorpion tail', t: 'pet' },
+    { e: '🚆', n: 'Bullet Train', d: 'Faster than a thought', t: 'vehicle' },
+    { e: '🏯', n: 'Ancient Temple Background', d: 'Sacred forgotten halls', t: 'background' },
+    { e: '🌪️', n: 'Tornado Background', d: 'Pure chaotic power', t: 'background' },
+    { e: '🪔', n: 'Magic Lamp', d: 'Three wishes inside', t: 'item' },
+    { e: '⚜️', n: 'Royal Insignia', d: 'Mark of true nobility', t: 'accessory' },
+    { e: '🪅', n: 'Piñata of Plenty', d: 'Always full of treats', t: 'item' },
+    { e: '✨', n: "Sorcerer's Cowl", d: 'Runes glow with arcane power', t: 'accessory', svgKey: 'sorcerersCowl', customDraw: 'sorcerersCowl' },
+  ],
+  mythic: [
+    { e: '✨', n: 'Wish Star', d: 'One wish, anything you want', t: 'item' },
+    { e: '⚡', n: "Zeus's Lightning", d: 'Pure divine power', t: 'weapon', power: 78 },
+    { e: '🔥', n: 'Pet Phoenix', d: 'Reborn from ashes daily', t: 'pet' },
+    { e: '🚀', n: 'Personal Rocket', d: 'To the moon, literally', t: 'vehicle' },
+    { e: '👁️', n: 'Eye of Providence', d: 'Sees all your future wins', t: 'item' },
+    { e: '🪐', n: 'Infinity Stone', d: 'Reality bends to you', t: 'item' },
+    { e: '♾️', n: 'Infinity Frame', d: 'Border that loops forever', t: 'frame', frameClass: 'infinity' },
+    { e: '⏳', n: 'Time Frame', d: 'Hours rotate around it', t: 'frame', frameClass: 'time' },
+    { e: '🦋', n: 'Pet Soul Butterfly', d: 'Carries memories on its wings', t: 'pet' },
+    { e: '🐚', n: "Triton's Conch", d: 'Calls forth tidal waves', t: 'weapon', power: 70 },
+    { e: '☄️', n: 'Star-Crusher Hammer', d: 'Forged from a meteor', t: 'weapon', power: 82 },
+    { e: '🌸', n: 'Eternal Sakura Background', d: 'Petals fall for eternity', t: 'background' },
+    { e: '🕊️', n: 'Pet Ascension Dove', d: 'Bringer of peace', t: 'pet' },
+    { e: '💫', n: 'Galaxy Cruiser', d: 'Skip between solar systems', t: 'vehicle' },
+    { e: '🗿', n: 'Moai Sentinel', d: 'Stares into your soul', t: 'item' },
+    { e: '🌈', n: 'Rainbow Bridge Background', d: 'Connects all realms', t: 'background' },
+    { e: '🌙', n: 'Moonraker Staff', d: 'Pulls power from the moon itself', t: 'weapon', power: 83 },
+  ]
+};
+
+const DROP_RATES = {
+  small: { common: 0.70, uncommon: 0.25, rare: 0.05, epic: 0, legendary: 0, mythic: 0 },
+  big:   { common: 0.20, uncommon: 0.40, rare: 0.30, epic: 0.09, legendary: 0.01, mythic: 0 },
+  huge:  { common: 0.05, uncommon: 0.15, rare: 0.35, epic: 0.30, legendary: 0.13, mythic: 0.02 }
+};
+
+const ACHIEVEMENTS = [
+  { id: 'first_goal', icon: '🎯', n: 'First Strike', d: 'Complete your first goal', xp: 50 },
+  { id: 'goals_10', icon: '⚡', n: 'Ten Down', d: 'Complete 10 goals', xp: 100 },
+  { id: 'goals_50', icon: '💪', n: 'Half-Century', d: 'Complete 50 goals', xp: 250 },
+  { id: 'goals_100', icon: '🏆', n: 'Centurion', d: 'Complete 100 goals', xp: 500 },
+  { id: 'streak_3', icon: '🔥', n: 'On Fire', d: '3-day daily streak', xp: 75 },
+  { id: 'streak_7', icon: '🔥🔥', n: 'Week Warrior', d: '7-day daily streak', xp: 150 },
+  { id: 'streak_30', icon: '🔥🔥🔥', n: 'Unstoppable', d: '30-day daily streak', xp: 500 },
+  { id: 'first_egg', icon: '🥚', n: 'First Hatch', d: 'Hatch your first egg', xp: 25 },
+  { id: 'rare_item', icon: '💎', n: 'Treasure Hunter', d: 'Hatch a rare or better item', xp: 75 },
+  { id: 'mythic_item', icon: '🌠', n: 'Touched by Fate', d: 'Hatch a mythic item', xp: 500 },
+  { id: 'items_10', icon: '🎒', n: 'Collector', d: 'Hatch 10 items total', xp: 100 },
+  { id: 'items_50', icon: '🏛️', n: 'Curator', d: 'Hatch 50 items total', xp: 300 },
+  { id: 'level_5', icon: '⭐', n: 'Rising Star', d: 'Reach level 5', xp: 150 },
+  { id: 'level_10', icon: '🌟', n: 'Legend', d: 'Reach level 10', xp: 400 },
+  { id: 'customize', icon: '🎨', n: 'Identity', d: 'Customize your avatar', xp: 25 },
+  { id: 'huge_goal', icon: '🐘', n: 'Big Game', d: 'Complete a Huge goal', xp: 100 },
+  { id: 'all_categories', icon: '🌈', n: 'Renaissance', d: 'Complete a goal in every category', xp: 200 },
+  // Marketplace
+  { id: 'first_trade', icon: '🔁', n: 'First Trade', d: 'Trade in your first duplicate', xp: 50 },
+  { id: 'bulk_trader', icon: '💱', n: 'Bulk Trader', d: 'Trade in 10 duplicates total', xp: 200 },
+  { id: 'egg_trader', icon: '🥚', n: 'Egg Merchant', d: 'Use the egg marketplace trades', xp: 50 },
+  // Hatching milestones
+  { id: 'speed_hatcher', icon: '⚡', n: 'Speed Hatcher', d: 'Hatch 10+ eggs in one go', xp: 100 },
+  { id: 'items_30', icon: '🎒', n: 'Avid Collector', d: 'Hatch 30 items total', xp: 200 },
+  { id: 'mythic_hoarder', icon: '🌌', n: 'Mythic Hoarder', d: 'Hatch 5 mythic items', xp: 400 },
+  // Item-type milestones
+  { id: 'garage_owner', icon: '🔧', n: 'Garage Owner', d: 'Collect 5 different vehicles', xp: 150 },
+  { id: 'frame_collector', icon: '🖼️', n: 'Frame Collector', d: 'Collect 5 different frames', xp: 150 },
+  { id: 'pet_whisperer', icon: '🐾', n: 'Pet Whisperer', d: 'Collect 10 different pets', xp: 150 },
+  { id: 'weapon_master', icon: '🗡️', n: 'Weapon Master', d: 'Collect 10 different weapons', xp: 150 },
+  { id: 'fully_loaded', icon: '🛡️', n: 'Fully Loaded', d: 'Equip an item in every slot', xp: 200 },
+  // Colosseum
+  { id: 'colosseum_win', icon: '⚔️', n: 'Champion', d: 'Win a Colosseum match', xp: 150 },
+  { id: 'colosseum_sweep', icon: '🏅', n: 'Sweep!', d: 'Win 3-0 in the Colosseum', xp: 300 },
+  // Modes & productivity
+  { id: 'lock_in', icon: '🎯', n: 'Lock In', d: 'Activate Super Duper Simple Mode', xp: 50 },
+  { id: 'productive_day', icon: '📈', n: 'Productive Day', d: 'Complete 5 goals in one day', xp: 150 },
+];
+
+const HAIR_STYLES = ['short', 'long', 'ponytail', 'bob', 'spiky', 'curly', 'mohawk', 'buzz', 'bald'];
+const EYE_SHAPES = ['round', 'almond', 'sleepy', 'sparkle', 'wink'];
+const MOUTH_STYLES = ['smile', 'grin', 'happy', 'wide', 'neutral', 'smirk', 'frown', 'surprised', 'gasp', 'tongue', 'tongueout', 'kiss', 'mustache', 'none'];
+const BROW_STYLES = ['normal', 'arched', 'thick', 'angled'];
+const FACE_SHAPES = ['round', 'oval', 'square'];
+const SHIRT_STYLES = ['tee', 'hoodie', 'tank', 'collar', 'striped'];
+const PANTS_STYLES = ['shorts', 'pants', 'skirt'];
+const FACE_FEATURES = ['none', 'freckles', 'blush', 'both'];
+
+const SKIN_COLORS = ['#fce0c4','#f4c2a1','#e6b389','#d4a373','#b8865c','#8b5a3c','#5d3a1a','#a8e6cf','#c5a3ff','#ffb3b3','#cce6ff'];
+const HAIR_COLORS = ['#2c1810','#4a2c1a','#8b4513','#c19a6b','#daa520','#f4d35e','#c0392b','#e67e22','#3498db','#9b59b6','#2ecc71','#e91e63','#7f8c8d','#ecf0f1'];
+const EYE_COLORS = ['#2c3e50','#27ae60','#2980b9','#8e44ad','#d35400','#16a085','#c0392b'];
+const SHIRT_COLORS = ['#3498db','#e74c3c','#2ecc71','#f1c40f','#9b59b6','#34495e','#ecf0f1','#e67e22','#16a085','#e91e63','#000','#fff'];
+const PANTS_COLORS = ['#2c3e50','#7f8c8d','#34495e','#8b4513','#3498db','#000','#5d4e37'];
+const SHOE_COLORS = ['#1a1a1a','#5d4e37','#fff','#e74c3c','#f1c40f','#3498db'];
+
+const XP_PER_SIZE = { small: 10, medium: 25, big: 50, huge: 100 };
+
+// Pixel-art pet sprite color palettes (keyed by emoji)
+const PET_COLORS = {
+  '🐭': { body: '#aaa',     accent: '#777' },
+  '🐸': { body: '#27ae60',  accent: '#1a6b3a' },
+  '🐱': { body: '#8b8b8b',  accent: '#5a5a5a' },
+  '🐶': { body: '#c4a07a',  accent: '#7a5a35' },
+  '🐰': { body: '#f0f0f0',  accent: '#999' },
+  '🐺': { body: '#666',     accent: '#333' },
+  '🦊': { body: '#e67e22',  accent: '#a04510' },
+  '🦅': { body: '#8b4513',  accent: '#5a2c0a' },
+  '🐻': { body: '#2c1810',  accent: '#000' },
+  '🦁': { body: '#d4a017',  accent: '#a07a10' },
+  '🐯': { body: '#e67e22',  accent: '#000' },
+  '🦄': { body: '#fff',     accent: '#ddd' },
+  '🐉': { body: '#c0392b',  accent: '#5a1810' },
+  '🦖': { body: '#27ae60',  accent: '#1a6b3a' },
+  '🐙': { body: '#9b59b6',  accent: '#5a2a80' },
+  '🔥': { body: '#e74c3c',  accent: '#c0392b' }
+};
+
+function getPetColors(item) {
+  return PET_COLORS[item.e] || { body: '#a08866', accent: '#604a30' };
+}
+
+// Render a pet as just the emoji (no body, no legs) — clean and recognizable
+function drawPetSprite(ctx, cx, cy, item, scale) {
+  scale = scale || 1;
+  const emojiSize = Math.round(30 * scale);
+  ctx.font = emojiSize + 'px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(item.e, cx, cy);
+}
+
+// Pixel-art SVGs for special accessories (wizard hats etc.) — used in inventory cards
+function accessorySvg(svgKey, sizeClass) {
+  const cls = `accessory-svg ${sizeClass || ''}`;
+  if (svgKey === 'wizardHat') {
+    return `<svg viewBox="0 0 16 16" class="${cls}" shape-rendering="crispEdges">
+      <rect x="7" y="1" width="2" height="2" fill="#2c3e7e"/>
+      <rect x="6" y="3" width="4" height="2" fill="#2c3e7e"/>
+      <rect x="5" y="5" width="6" height="2" fill="#2c3e7e"/>
+      <rect x="4" y="7" width="8" height="2" fill="#2c3e7e"/>
+      <rect x="3" y="9" width="10" height="2" fill="#2c3e7e"/>
+      <rect x="1" y="11" width="14" height="2" fill="#2c3e7e"/>
+      <rect x="0" y="13" width="16" height="1" fill="#1a2a5e"/>
+      <rect x="7" y="3" width="1" height="1" fill="#ffd700"/>
+      <rect x="5" y="7" width="1" height="1" fill="#ffd700"/>
+      <rect x="9" y="6" width="1" height="1" fill="#ffd700"/>
+      <rect x="4" y="9" width="1" height="1" fill="#ffd700"/>
+      <rect x="10" y="9" width="1" height="1" fill="#ffd700"/>
+    </svg>`;
+  }
+  if (svgKey === 'witchHat') {
+    return `<svg viewBox="0 0 16 16" class="${cls}" shape-rendering="crispEdges">
+      <rect x="10" y="1" width="2" height="2" fill="#1a1a1a"/>
+      <rect x="9" y="3" width="3" height="2" fill="#1a1a1a"/>
+      <rect x="8" y="5" width="4" height="2" fill="#1a1a1a"/>
+      <rect x="6" y="7" width="6" height="2" fill="#1a1a1a"/>
+      <rect x="4" y="9" width="8" height="2" fill="#1a1a1a"/>
+      <rect x="1" y="11" width="14" height="2" fill="#1a1a1a"/>
+      <rect x="0" y="13" width="16" height="1" fill="#000"/>
+      <rect x="4" y="9" width="8" height="1" fill="#8e44ad"/>
+      <rect x="6" y="9" width="2" height="1" fill="#ffd700"/>
+    </svg>`;
+  }
+  if (svgKey === 'mageCap') {
+    return `<svg viewBox="0 0 16 16" class="${cls}" shape-rendering="crispEdges">
+      <rect x="7" y="3" width="2" height="2" fill="#3498db"/>
+      <rect x="6" y="5" width="4" height="2" fill="#3498db"/>
+      <rect x="5" y="7" width="6" height="2" fill="#3498db"/>
+      <rect x="4" y="9" width="8" height="2" fill="#3498db"/>
+      <rect x="3" y="11" width="10" height="2" fill="#3498db"/>
+      <rect x="2" y="13" width="12" height="1" fill="#2980b9"/>
+      <rect x="6" y="6" width="1" height="1" fill="#fff"/>
+      <rect x="9" y="8" width="1" height="1" fill="#fff"/>
+      <rect x="5" y="10" width="1" height="1" fill="#fff"/>
+    </svg>`;
+  }
+  if (svgKey === 'sorcerersCowl') {
+    return `<svg viewBox="0 0 18 18" class="${cls}" shape-rendering="crispEdges">
+      <rect x="8" y="0" width="2" height="2" fill="#7d2ad4"/>
+      <rect x="7" y="2" width="4" height="2" fill="#7d2ad4"/>
+      <rect x="6" y="4" width="6" height="2" fill="#7d2ad4"/>
+      <rect x="5" y="6" width="8" height="2" fill="#7d2ad4"/>
+      <rect x="4" y="8" width="10" height="2" fill="#7d2ad4"/>
+      <rect x="3" y="10" width="12" height="2" fill="#7d2ad4"/>
+      <rect x="1" y="12" width="16" height="2" fill="#7d2ad4"/>
+      <rect x="0" y="14" width="18" height="1" fill="#5a1ba6"/>
+      <rect x="3" y="11" width="12" height="1" fill="#ffd700"/>
+      <rect x="8" y="6" width="2" height="1" fill="#ffd700"/>
+      <rect x="9" y="7" width="1" height="2" fill="#ffd700"/>
+      <rect x="8" y="8" width="2" height="1" fill="#ffd700"/>
+      <rect x="5" y="9" width="1" height="1" fill="#ffd700"/>
+      <rect x="12" y="9" width="1" height="1" fill="#ffd700"/>
+    </svg>`;
+  }
+  return '';
+}
+
+// Canvas-pixel drawing for custom-art hats — used when equipped on the avatar
+function drawCustomHat(ctx, cx, cy, scale, hatType) {
+  scale = scale || 1;
+  const px = (x, y, w, h, c) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(Math.round(cx + x*scale), Math.round(cy + y*scale), Math.max(1, Math.round(w*scale)), Math.max(1, Math.round(h*scale)));
+  };
+  if (hatType === 'wizardHat') {
+    const navy = '#2c3e7e', star = '#ffd700';
+    px(-1, -10, 2, 2, navy);
+    px(-2, -8, 4, 2, navy);
+    px(-3, -6, 6, 2, navy);
+    px(-4, -4, 8, 2, navy);
+    px(-5, -2, 10, 2, navy);
+    px(-7, 0, 14, 2, navy);
+    px(-8, 2, 16, 1, '#1a2a5e');
+    px(-1, -8, 1, 1, star);
+    px(-3, -5, 1, 1, star);
+    px(2, -6, 1, 1, star);
+    px(-4, -2, 1, 1, star);
+    px(3, -3, 1, 1, star);
+  }
+  if (hatType === 'witchHat') {
+    const black = '#1a1a1a', purple = '#8e44ad';
+    px(2, -10, 2, 2, black);
+    px(1, -8, 3, 2, black);
+    px(0, -6, 4, 2, black);
+    px(-1, -4, 5, 2, black);
+    px(-3, -2, 8, 2, black);
+    px(-7, 0, 14, 2, black);
+    px(-8, 2, 16, 1, '#000');
+    px(-3, -2, 8, 1, purple);
+    px(-1, -2, 2, 1, '#ffd700');
+  }
+  if (hatType === 'mageCap') {
+    const blue = '#3498db';
+    px(-1, -8, 2, 2, blue);
+    px(-2, -6, 4, 2, blue);
+    px(-3, -4, 6, 2, blue);
+    px(-4, -2, 8, 2, blue);
+    px(-5, 0, 10, 2, blue);
+    px(-5, 2, 10, 1, '#2980b9');
+    px(-1, -5, 1, 1, '#fff');
+    px(2, -3, 1, 1, '#fff');
+  }
+  if (hatType === 'sorcerersCowl') {
+    const purple = '#7d2ad4', gold = '#ffd700';
+    px(-1, -12, 2, 2, purple);
+    px(-2, -10, 4, 2, purple);
+    px(-3, -8, 6, 2, purple);
+    px(-4, -6, 8, 2, purple);
+    px(-5, -4, 10, 2, purple);
+    px(-6, -2, 12, 2, purple);
+    px(-8, 0, 16, 2, purple);
+    px(-9, 2, 18, 1, '#5a1ba6');
+    px(-6, -3, 12, 1, gold);
+    px(-1, -7, 2, 1, gold);
+    px(0, -6, 1, 2, gold);
+    px(-1, -5, 2, 1, gold);
+    px(-4, -5, 1, 1, gold);
+    px(3, -5, 1, 1, gold);
+  }
+}
+
+// Pixel-art egg SVGs (stair-stepped paths with shape-rendering=crispEdges)
+function eggSvg(size, extraClass) {
+  const cls = (extraClass || '') + ' ' + size;
+  if (size === 'small') {
+    return `<svg viewBox="0 0 14 18" class="egg-svg ${cls}" shape-rendering="crispEdges">
+      <path d="M5 0 H9 V1 H10 V2 H11 V3 H12 V4 H13 V12 H12 V14 H11 V16 H10 V17 H4 V16 H3 V14 H2 V12 H1 V4 H2 V3 H3 V2 H4 V1 H5 Z" fill="#f5e6c8" stroke="#5d4423" stroke-width="0.4"/>
+      <path d="M3 4 H5 V7 H3 Z" fill="#fff8e0"/>
+      <path d="M10 11 H11 V14 H10 Z M9 14 H11 V15 H9 Z" fill="#d4ba80"/>
+      <rect x="6" y="9" width="1" height="1" fill="#c4a060"/>
+      <rect x="8" y="6" width="1" height="1" fill="#c4a060"/>
+    </svg>`;
+  }
+  if (size === 'big') {
+    return `<svg viewBox="0 0 18 24" class="egg-svg ${cls}" shape-rendering="crispEdges">
+      <path d="M6 0 H12 V1 H14 V2 H15 V4 H16 V6 H17 V16 H16 V19 H15 V21 H14 V22 H12 V23 H6 V22 H4 V21 H3 V19 H2 V16 H1 V6 H2 V4 H3 V2 H4 V1 H6 Z" fill="#e8d8a8" stroke="#5d4423" stroke-width="0.5"/>
+      <path d="M4 5 H7 V9 H4 Z" fill="#fff8d8"/>
+      <path d="M13 13 H15 V18 H13 Z M11 19 H14 V20 H11 Z" fill="#c0a060"/>
+      <rect x="8" y="12" width="1" height="1" fill="#a08040"/>
+      <rect x="11" y="8" width="1" height="1" fill="#a08040"/>
+      <rect x="6" y="15" width="1" height="1" fill="#a08040"/>
+    </svg>`;
+  }
+  // huge — shimmery gold-tinted egg
+  return `<svg viewBox="0 0 24 32" class="egg-svg ${cls}" shape-rendering="crispEdges">
+    <path d="M8 0 H16 V1 H18 V2 H20 V4 H21 V6 H22 V8 H23 V22 H22 V25 H21 V27 H20 V29 H18 V30 H16 V31 H8 V30 H6 V29 H4 V27 H3 V25 H2 V22 H1 V8 H2 V6 H3 V4 H4 V2 H6 V1 H8 Z" fill="#fff5b8" stroke="#7d5410" stroke-width="0.5"/>
+    <path d="M5 6 H9 V12 H5 Z" fill="#fffae8"/>
+    <path d="M17 17 H20 V24 H17 Z M14 25 H19 V27 H14 Z" fill="#d4b860"/>
+    <rect x="10" y="12" width="2" height="1" fill="#b09040"/>
+    <rect x="14" y="10" width="1" height="2" fill="#b09040"/>
+    <rect x="11" y="20" width="1" height="1" fill="#b09040"/>
+    <rect x="6" y="3" width="1" height="1" fill="#fff"/>
+    <rect x="20" y="22" width="1" height="1" fill="#fff"/>
+    <rect x="16" y="5" width="1" height="1" fill="#fff"/>
+  </svg>`;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let state = {
+  avatar: {
+    skin: '#f4c2a1',
+    hair: '#2c1810',
+    hairStyle: 'short',
+    shirt: '#3498db',
+    shirtStyle: 'tee',
+    eyes: '#2c3e50',
+    eyeShape: 'round',
+    mouth: 'smile',
+    brows: 'normal',
+    face: 'round',
+    feature: 'none',
+    pants: '#2c3e50',
+    pantsStyle: 'pants',
+    shoes: '#1a1a1a',
+    name: ''
+  },
+  smallEggs: 0,
+  bigEggs: 0,
+  hugeEggs: 0,
+  streak: 0,
+  lastDailyDate: null,
+  goalsCompleted: 0,
+  goals: [],
+  inventory: [],
+  xp: 0,
+  level: 1,
+  achievements: {}, // id -> unlock date
+  equipped: { hat: null, weapon: null, pet: null, background: null, vehicle: null, frame: null },
+  completionLog: {}, // 'YYYY-MM-DD' -> count
+  categoriesCompleted: {}, // category -> count
+  settings: { sound: true, fx: true, seenOnboarding: false, simpleMode: false },
+  warehouseAvatarPos: { x: 300, y: 200 },
+  dupeTradeCount: 0
+};
+
+// Helper functions for achievement checks
+function uniqueItemNamesByType(t) {
+  const names = new Set();
+  state.inventory.forEach(i => { if (i.t === t) names.add(i.n); });
+  return names.size;
+}
+function countItemsByRarity(r) {
+  return state.inventory.filter(i => i.rarity === r).length;
+}
+function allSlotsEquipped() {
+  return ['hat','weapon','pet','vehicle','background','frame'].every(s => state.equipped[s]);
+}
+function checkCollectionAchievements() {
+  if (state.inventory.length >= 30) checkAchievement('items_30');
+  if (countItemsByRarity('mythic') >= 5) checkAchievement('mythic_hoarder');
+  if (uniqueItemNamesByType('vehicle') >= 5) checkAchievement('garage_owner');
+  if (uniqueItemNamesByType('frame') >= 5) checkAchievement('frame_collector');
+  if (uniqueItemNamesByType('pet') >= 10) checkAchievement('pet_whisperer');
+  if (uniqueItemNamesByType('weapon') >= 10) checkAchievement('weapon_master');
+}
+
+let editingGoalId = null;
+let lastCompleted = null; // for undo
+let lastCompletedTimer = null;
+
+// ============================================================
+// STORAGE
+// ============================================================
+function save() { localStorage.setItem('dingusEggs', JSON.stringify(state)); }
+function load() {
+  const s = localStorage.getItem('dingusEggs');
+  if (s) {
+    try {
+      const loaded = JSON.parse(s);
+      // Deep merge to preserve new defaults
+      state = mergeDeep(state, loaded);
+    } catch(e) { console.error('Load failed:', e); }
+  }
+}
+function mergeDeep(target, source) {
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      target[key] = mergeDeep(target[key] || {}, source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+  return target;
+}
+
+// ============================================================
+// AVATAR DRAWING (Chibi style, 64x64)
+// ============================================================
+function shadeColor(hex, percent) {
+  if (!hex || hex.length < 7) return hex;
+  const num = parseInt(hex.replace('#',''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+  const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amt));
+  const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+  return '#' + (0x1000000 + R*0x10000 + G*0x100 + B).toString(16).slice(1);
+}
+
+// Draw chibi avatar onto a given context. cx,cy = center bottom of avatar.
+// scale = pixel size (1 = 64x64 base)
+function drawChibi(ctx, cx, cy, scale, av, opts) {
+  opts = opts || {};
+  const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(cx + (x - 32) * scale), Math.round(cy + (y - 64) * scale), Math.ceil(w*scale), Math.ceil(h*scale)); };
+  const skin = av.skin;
+  const skinShade = shadeColor(skin, -12);
+  const skinLight = shadeColor(skin, 10);
+  const hair = av.hair;
+  const hairShade = shadeColor(hair, -18);
+  const hairLight = shadeColor(hair, 15);
+  const shirt = av.shirt;
+  const shirtShade = shadeColor(shirt, -18);
+  const shirtLight = shadeColor(shirt, 12);
+  const pants = av.pants;
+  const pantsShade = shadeColor(pants, -18);
+  const shoes = av.shoes;
+
+  // === BODY (small chibi body, rows ~38 to 56) ===
+  // Shoes (chunky BrickHeadz boots — taller for the stubby-legged look)
+  px(20, 58, 10, 6, shoes);
+  px(34, 58, 10, 6, shoes);
+  px(20, 58, 10, 1, shadeColor(shoes, 30)); // shoe highlight (top)
+  px(20, 62, 10, 2, shadeColor(shoes, -25)); // shoe shadow (bottom sole)
+  px(34, 62, 10, 2, shadeColor(shoes, -25));
+
+  // Pants (legs shortened — total visible leg length ~6-8px to match BrickHeadz proportions)
+  if (av.pantsStyle === 'shorts') {
+    px(20, 50, 10, 8, pants);
+    px(34, 50, 10, 8, pants);
+    px(28, 50, 8, 4, pants); // crotch
+    // shading
+    px(20, 56, 10, 2, pantsShade);
+    px(34, 56, 10, 2, pantsShade);
+  } else if (av.pantsStyle === 'skirt') {
+    px(18, 48, 28, 4, pants);
+    px(20, 52, 24, 4, pants);
+    px(20, 52, 24, 1, shadeColor(pants, 15));
+    // legs below skirt
+    px(22, 56, 8, 2, skin);
+    px(34, 56, 8, 2, skin);
+  } else { // pants
+    px(20, 48, 10, 10, pants);
+    px(34, 48, 10, 10, pants);
+    px(28, 48, 8, 4, pants); // crotch
+    px(20, 56, 10, 2, pantsShade);
+    px(34, 56, 10, 2, pantsShade);
+    px(20, 48, 1, 10, shadeColor(pants, 10));
+    px(43, 48, 1, 10, pantsShade);
+  }
+
+  // Shirt body
+  if (av.shirtStyle === 'tee') {
+    px(18, 42, 28, 8, shirt);
+    px(18, 42, 28, 1, shirtLight); // highlight top
+    px(18, 49, 28, 1, shirtShade); // bottom shadow
+  } else if (av.shirtStyle === 'hoodie') {
+    px(17, 40, 30, 10, shirt);
+    px(17, 40, 30, 1, shirtLight);
+    px(17, 49, 30, 1, shirtShade);
+    // hood ties
+    px(28, 42, 1, 4, '#fff');
+    px(35, 42, 1, 4, '#fff');
+    // pocket
+    px(24, 46, 16, 3, shirtShade);
+  } else if (av.shirtStyle === 'tank') {
+    px(20, 42, 24, 8, shirt);
+    px(18, 42, 2, 4, shirt); // strap left
+    px(44, 42, 2, 4, shirt); // strap right
+    px(20, 49, 24, 1, shirtShade);
+  } else if (av.shirtStyle === 'collar') {
+    px(18, 42, 28, 8, shirt);
+    // collar
+    px(28, 42, 8, 2, '#fff');
+    px(28, 42, 8, 1, '#ccc');
+    // buttons
+    px(31, 44, 1, 1, '#aaa');
+    px(31, 47, 1, 1, '#aaa');
+    px(18, 49, 28, 1, shirtShade);
+  } else if (av.shirtStyle === 'striped') {
+    px(18, 42, 28, 8, shirt);
+    px(18, 43, 28, 1, '#fff');
+    px(18, 45, 28, 1, '#fff');
+    px(18, 47, 28, 1, '#fff');
+    px(18, 49, 28, 1, shirtShade);
+  }
+
+  // Arms (stubby BrickHeadz arms — narrower so head stays wider than shoulders)
+  px(16, 42, 2, 8, shirt);
+  px(46, 42, 2, 8, shirt);
+  px(16, 42, 1, 8, shirtLight);
+  px(47, 42, 1, 8, shirtShade);
+  // Hands
+  px(16, 50, 2, 3, skin);
+  px(46, 50, 2, 3, skin);
+  px(16, 52, 2, 1, skinShade);
+  px(46, 52, 2, 1, skinShade);
+
+  // === HEAD (BrickHeadz-style: blocky, wider than body, no neck) ===
+  // Head is intentionally wider than body+arms so the BrickHeadz silhouette reads correctly
+  let headLeft = 14, headRight = 50, headTop = 4, headBottom = 42;
+  if (av.face === 'oval') { headLeft = 16; headRight = 48; headTop = 5; }
+  if (av.face === 'square') { headLeft = 13; headRight = 51; headTop = 4; }
+
+  // Head fill
+  px(headLeft, headTop, headRight - headLeft, headBottom - headTop, skin);
+
+  // Slight rounded corners (BrickHeadz have a tiny chamfer, not full rounding)
+  // Only round the TOP corners — bottom corners stay sharp because head meets shoulders
+  if (av.face !== 'square') {
+    ctx.clearRect(Math.round(cx + (headLeft - 32) * scale), Math.round(cy + (headTop - 64) * scale), Math.ceil(1*scale), Math.ceil(1*scale));
+    ctx.clearRect(Math.round(cx + (headRight - 1 - 32) * scale), Math.round(cy + (headTop - 64) * scale), Math.ceil(1*scale), Math.ceil(1*scale));
+  }
+
+  // Subtle side shading for blocky 3D feel (gives the BrickHeadz "molded plastic" look)
+  px(headLeft, headTop + 1, 1, headBottom - headTop - 1, skinShade);
+  px(headRight - 1, headTop + 1, 1, headBottom - headTop - 1, skinShade);
+  // Forehead highlight
+  px(headLeft + 2, headTop + 1, headRight - headLeft - 4, 1, skinLight);
+
+  // Cheeks (face features)
+  if (av.feature === 'blush' || av.feature === 'both') {
+    px(headLeft + 2, 25, 4, 2, 'rgba(255,150,150,0.6)');
+    px(headRight - 6, 25, 4, 2, 'rgba(255,150,150,0.6)');
+  }
+  if (av.feature === 'freckles' || av.feature === 'both') {
+    px(22, 23, 1, 1, shadeColor(skin, -25));
+    px(24, 24, 1, 1, shadeColor(skin, -25));
+    px(40, 23, 1, 1, shadeColor(skin, -25));
+    px(42, 24, 1, 1, shadeColor(skin, -25));
+    px(31, 25, 1, 1, shadeColor(skin, -25));
+  }
+
+  // === HAIR ===
+  if (av.hairStyle !== 'bald') {
+    drawHair(px, av, hair, hairShade, hairLight, headLeft, headRight, headTop);
+  }
+
+  // === EYEBROWS ===
+  drawBrows(px, av, hair);
+
+  // === EYES ===
+  drawEyes(px, av);
+
+  // === MOUTH ===
+  drawMouth(px, av);
+
+  // === EQUIPPED ITEMS (hat, weapon) ===
+  if (opts.equipped) {
+    if (opts.equipped.hat) {
+      if (opts.equipped.hat.customDraw) {
+        // Custom pixel-art hat sits on top of head
+        drawCustomHat(ctx, cx, cy + (headTop - 64 + 2) * scale, scale, opts.equipped.hat.customDraw);
+      } else {
+        // Emoji-based hat
+        const fs = Math.round(14 * scale);
+        ctx.font = fs + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(opts.equipped.hat.e, Math.round(cx), Math.round(cy + (headTop - 64 + 3) * scale));
+      }
+    }
+    if (opts.equipped.weapon) {
+      const fs = Math.round(12 * scale);
+      ctx.font = fs + 'px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(opts.equipped.weapon.e, Math.round(cx + (52 - 32) * scale), Math.round(cy + (44 - 64) * scale));
+    }
+  }
+}
+
+function drawHair(px, av, hair, hairShade, hairLight, hl, hr, ht) {
+  const style = av.hairStyle;
+  if (style === 'short') {
+    px(hl, ht, hr - hl, 5, hair);
+    px(hl - 1, ht + 2, 1, 4, hair);
+    px(hr, ht + 2, 1, 4, hair);
+    px(hl, ht, hr - hl, 1, hairLight);
+    px(hl, ht + 4, hr - hl, 1, hairShade);
+  } else if (style === 'long') {
+    px(hl, ht, hr - hl, 6, hair);
+    px(hl - 1, ht + 2, 1, 18, hair); // long left
+    px(hr, ht + 2, 1, 18, hair);     // long right
+    px(hl, ht, hr - hl, 1, hairLight);
+    px(hl - 1, ht + 18, 1, 2, hairShade);
+    px(hr, ht + 18, 1, 2, hairShade);
+  } else if (style === 'ponytail') {
+    px(hl, ht, hr - hl, 5, hair);
+    px(hl, ht, hr - hl, 1, hairLight);
+    // ponytail behind
+    px(hr + 1, ht + 4, 2, 14, hair);
+    px(hr + 1, ht + 4, 1, 14, hairLight);
+    px(hr + 2, ht + 16, 1, 2, hairShade);
+  } else if (style === 'bob') {
+    px(hl, ht, hr - hl, 4, hair);
+    px(hl - 1, ht + 2, 1, 10, hair);
+    px(hr, ht + 2, 1, 10, hair);
+    px(hl - 1, ht + 11, 2, 1, hairShade);
+    px(hr, ht + 11, 2, 1, hairShade);
+  } else if (style === 'spiky') {
+    px(hl, ht + 2, hr - hl, 4, hair);
+    // spikes
+    px(hl + 2, ht - 2, 2, 4, hair);
+    px(hl + 7, ht - 3, 2, 5, hair);
+    px(hl + 12, ht - 2, 2, 4, hair);
+    px(hl + 17, ht - 3, 2, 5, hair);
+    px(hl + 22, ht - 2, 2, 4, hair);
+    px(hl, ht + 2, hr - hl, 1, hairLight);
+  } else if (style === 'curly') {
+    // curly puff
+    px(hl - 1, ht - 1, hr - hl + 2, 7, hair);
+    // bumps
+    px(hl - 2, ht + 1, 2, 4, hair);
+    px(hr, ht + 1, 2, 4, hair);
+    px(hl + 4, ht - 2, 3, 3, hair);
+    px(hl + 12, ht - 3, 3, 3, hair);
+    px(hl + 20, ht - 2, 3, 3, hair);
+    px(hl, ht, hr - hl, 1, hairLight);
+  } else if (style === 'mohawk') {
+    px(31, ht - 2, 2, 8, hair);
+    px(30, ht, 4, 6, hair);
+    px(31, ht - 2, 2, 1, hairLight);
+    // sides shaved (just skin already shows)
+  } else if (style === 'buzz') {
+    px(hl, ht + 1, hr - hl, 3, hair);
+    px(hl, ht + 1, hr - hl, 1, hairLight);
+  }
+}
+
+function drawBrows(px, av, hair) {
+  const browColor = shadeColor(hair, -10);
+  if (av.brows === 'normal') {
+    px(21, 18, 4, 1, browColor);
+    px(39, 18, 4, 1, browColor);
+  } else if (av.brows === 'arched') {
+    px(21, 19, 4, 1, browColor);
+    px(22, 18, 2, 1, browColor);
+    px(39, 19, 4, 1, browColor);
+    px(40, 18, 2, 1, browColor);
+  } else if (av.brows === 'thick') {
+    px(21, 18, 5, 2, browColor);
+    px(38, 18, 5, 2, browColor);
+  } else if (av.brows === 'angled') {
+    px(21, 19, 2, 1, browColor);
+    px(23, 18, 2, 1, browColor);
+    px(41, 19, 2, 1, browColor);
+    px(39, 18, 2, 1, browColor);
+  }
+}
+
+function drawBrickEye(px, x, y) {
+  // BrickHeadz-style eye: black circle (5x5 with corners shaved) with two white accents
+  px(x+1, y,   3, 1, '#000'); // top row (3 wide, corners shaved)
+  px(x,   y+1, 5, 3, '#000'); // middle 3 rows (5 wide)
+  px(x+1, y+4, 3, 1, '#000'); // bottom row (3 wide, corners shaved)
+  // Large 2x2 white accent in top-left of the circle
+  px(x+1, y+1, 2, 2, '#fff');
+  // Small 1x1 white accent in bottom-right
+  px(x+3, y+3, 1, 1, '#fff');
+}
+
+function drawEyes(px, av) {
+  const shape = av.eyeShape;
+  // Sleepy: closed slit
+  if (shape === 'sleepy') {
+    px(21, 22, 5, 1, '#000');
+    px(38, 22, 5, 1, '#000');
+    return;
+  }
+  // Wink: left eye open BrickHeadz style, right eye closed
+  if (shape === 'wink') {
+    drawBrickEye(px, 21, 20);
+    px(38, 22, 5, 1, '#000');
+    return;
+  }
+  // All other shapes use the canonical BrickHeadz eye
+  drawBrickEye(px, 21, 20);
+  drawBrickEye(px, 38, 20);
+}
+
+function drawMouth(px, av) {
+  const m = av.mouth;
+  const lipColor = '#5d2a1f';
+  if (m === 'smile') {
+    px(28, 32, 8, 1, lipColor);
+    px(28, 31, 1, 1, lipColor);
+    px(35, 31, 1, 1, lipColor);
+  } else if (m === 'grin') {
+    px(27, 31, 10, 3, lipColor);
+    px(28, 32, 8, 1, '#fff'); // teeth
+  } else if (m === 'neutral') {
+    px(28, 32, 8, 1, lipColor);
+  } else if (m === 'smirk') {
+    px(28, 32, 5, 1, lipColor);
+    px(33, 31, 2, 1, lipColor);
+  } else if (m === 'tongue') {
+    px(28, 31, 8, 2, lipColor);
+    px(30, 33, 4, 2, '#e74c3c'); // tongue
+  } else if (m === 'frown') {
+    px(28, 32, 8, 1, lipColor);
+    px(28, 33, 1, 1, lipColor);
+    px(35, 33, 1, 1, lipColor);
+    px(29, 33, 6, 1, lipColor);
+  } else if (m === 'surprised') {
+    // small open O
+    px(30, 31, 4, 3, lipColor);
+    px(31, 32, 2, 1, av.skin);
+  } else if (m === 'happy') {
+    // big upward smile with cheeks lifted
+    px(27, 32, 10, 1, lipColor);
+    px(28, 33, 8, 1, lipColor);
+    px(28, 31, 1, 1, lipColor);
+    px(35, 31, 1, 1, lipColor);
+  } else if (m === 'tongueout') {
+    // closed mouth with tongue sticking out
+    px(28, 32, 8, 1, lipColor);
+    px(31, 33, 3, 2, '#e74c3c');
+  } else if (m === 'kiss') {
+    // tiny pursed lips
+    px(30, 32, 4, 2, '#c0392b');
+    px(31, 33, 2, 1, lipColor);
+  } else if (m === 'wide') {
+    // wide flat smile
+    px(26, 32, 12, 1, lipColor);
+    px(26, 31, 1, 1, lipColor);
+    px(37, 31, 1, 1, lipColor);
+  } else if (m === 'gasp') {
+    // wider open O
+    px(29, 31, 6, 4, lipColor);
+    px(30, 32, 4, 2, av.skin);
+  } else if (m === 'mustache') {
+    // tiny mustache + smile
+    px(27, 30, 10, 1, '#2c1810');
+    px(29, 31, 6, 1, '#2c1810');
+    px(28, 33, 8, 1, lipColor);
+  } else if (m === 'none') {
+    // no mouth
+  }
+}
+
+function drawAvatar(canvasId) {
+  const canvas = document.getElementById(canvasId || 'avatarCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawChibi(ctx, 32, 64, 1, state.avatar, { equipped: state.equipped });
+
+  // Show equipped pet on the LEFT side of the avatar (mirroring the weapon on the right)
+  if (canvas.id === 'avatarCanvas' && state.equipped.pet) {
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    // Pet shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(12, 60, 7, 1.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Pet pixel-art sprite (left side, semi-transparent)
+    drawPetSprite(ctx, 12, 52, state.equipped.pet, 0.55);
+    ctx.restore();
+  }
+  // Update frame styling on the wrapper
+  if (canvas.id === 'avatarCanvas') {
+    applyAvatarFrame();
+  }
+}
+
+// ============================================================
+// AVATAR CUSTOMIZER
+// ============================================================
+function buildCustomizerOptions() {
+  const opts = document.getElementById('customizerOptions');
+  const av = state.avatar;
+  opts.innerHTML = `
+    <div><label>Skin tone</label>${selectColors('skin', SKIN_COLORS, av.skin)}</div>
+    <div><label>Face shape</label>${selectFromList('face', FACE_SHAPES, av.face)}</div>
+    <div><label>Hair style</label>${selectFromList('hairStyle', HAIR_STYLES, av.hairStyle)}</div>
+    <div><label>Hair color</label>${selectColors('hair', HAIR_COLORS, av.hair)}</div>
+    <div><label>Eyebrows</label>${selectFromList('brows', BROW_STYLES, av.brows)}</div>
+    <div><label>Eye shape</label>${selectFromList('eyeShape', EYE_SHAPES, av.eyeShape)}</div>
+    <div><label>Mouth</label>${selectFromList('mouth', MOUTH_STYLES, av.mouth)}</div>
+    <div><label>Face features</label>${selectFromList('feature', FACE_FEATURES, av.feature)}</div>
+    <div><label>Shirt style</label>${selectFromList('shirtStyle', SHIRT_STYLES, av.shirtStyle)}</div>
+    <div><label>Shirt color</label>${selectColors('shirt', SHIRT_COLORS, av.shirt)}</div>
+    <div><label>Pants style</label>${selectFromList('pantsStyle', PANTS_STYLES, av.pantsStyle)}</div>
+    <div><label>Pants color</label>${selectColors('pants', PANTS_COLORS, av.pants)}</div>
+    <div><label>Shoe color</label>${selectColors('shoes', SHOE_COLORS, av.shoes)}</div>
+  `;
+  opts.querySelectorAll('select').forEach(s => {
+    s.addEventListener('change', (e) => {
+      state.avatar[e.target.dataset.key] = e.target.value;
+      drawCustomizerAvatar();
+      drawAvatar();
+      save();
+      checkAchievement('customize');
+    });
+  });
+}
+
+function selectColors(key, colors, current) {
+  return `<select data-key="${key}">${colors.map(c => `<option value="${c}" ${c === current ? 'selected' : ''} style="background:${c};">${c}</option>`).join('')}</select>`;
+}
+function selectFromList(key, list, current) {
+  return `<select data-key="${key}">${list.map(v => `<option value="${v}" ${v === current ? 'selected' : ''}>${v}</option>`).join('')}</select>`;
+}
+
+function drawCustomizerAvatar() {
+  const canvas = document.getElementById('customizerCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, 64, 64);
+  drawChibi(ctx, 32, 64, 1, state.avatar, {});
+}
+
+function openCustomizer() {
+  buildCustomizerOptions();
+  drawCustomizerAvatar();
+  document.getElementById('customAvatarName').value = state.avatar.name || '';
+  document.getElementById('customizerModal').classList.add('show');
+}
+function closeCustomizer() {
+  state.avatar.name = document.getElementById('customAvatarName').value;
+  save();
+  drawAvatar();
+  updateAvatarNameDisplay();
+  document.getElementById('customizerModal').classList.remove('show');
+}
+function randomizeAvatar() {
+  const r = arr => arr[Math.floor(Math.random()*arr.length)];
+  state.avatar.skin = r(SKIN_COLORS);
+  state.avatar.hair = r(HAIR_COLORS);
+  state.avatar.hairStyle = r(HAIR_STYLES);
+  state.avatar.eyes = r(EYE_COLORS);
+  state.avatar.eyeShape = r(EYE_SHAPES);
+  state.avatar.mouth = r(MOUTH_STYLES);
+  state.avatar.brows = r(BROW_STYLES);
+  state.avatar.face = r(FACE_SHAPES);
+  state.avatar.feature = r(FACE_FEATURES);
+  state.avatar.shirt = r(SHIRT_COLORS);
+  state.avatar.shirtStyle = r(SHIRT_STYLES);
+  state.avatar.pants = r(PANTS_COLORS);
+  state.avatar.pantsStyle = r(PANTS_STYLES);
+  state.avatar.shoes = r(SHOE_COLORS);
+  buildCustomizerOptions();
+  drawCustomizerAvatar();
+  drawAvatar();
+  save();
+  checkAchievement('customize');
+}
+
+function updateAvatarNameDisplay() {
+  const span = document.getElementById('avatarNameDisplay');
+  span.textContent = state.avatar.name ? `— ${state.avatar.name}` : '';
+}
+
+// ============================================================
+// GOALS
+// ============================================================
+let subgoalCounter = 0;
+function addSubgoalInput(text) {
+  const list = document.getElementById('subgoalsList');
+  const id = 'subgoal-' + (subgoalCounter++);
+  const div = document.createElement('div');
+  div.className = 'subgoal-row';
+  div.id = id;
+  div.innerHTML = `
+    <input type="text" placeholder="Sub-goal description..." value="${text ? escapeHtml(text) : ''}">
+    <button class="small danger" onclick="document.getElementById('${id}').remove()">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+function saveGoal() {
+  const title = document.getElementById('goalTitle').value.trim();
+  if (!title) { toast('Give your goal a name first!'); return; }
+  const type = document.getElementById('goalType').value;
+  const size = document.getElementById('goalSize').value;
+  const category = document.getElementById('goalCategory').value;
+  const priority = document.getElementById('goalPriority').value;
+  const subInputs = document.querySelectorAll('#subgoalsList input');
+  const subgoals = Array.from(subInputs)
+    .map(i => i.value.trim())
+    .filter(v => v)
+    .map(text => ({ text, done: false }));
+
+  if (editingGoalId) {
+    const g = state.goals.find(x => x.id === editingGoalId);
+    if (g) {
+      g.title = title;
+      g.type = type;
+      g.size = size;
+      g.category = category;
+      g.priority = priority;
+      // Preserve subgoal completion where text matches
+      const oldSubs = g.subgoals || [];
+      g.subgoals = subgoals.map(s => {
+        const old = oldSubs.find(o => o.text === s.text);
+        return old || s;
+      });
+      toast('Goal updated!');
+    }
+    cancelEdit();
+  } else {
+    state.goals.push({
+      id: Date.now(),
+      title, type, size, category, priority, subgoals,
+      completed: false,
+      lastCompletedDate: null,
+      createdAt: Date.now()
+    });
+    toast('Goal added! Now crush it.');
+    playSound('click');
+  }
+
+  document.getElementById('goalTitle').value = '';
+  document.getElementById('subgoalsList').innerHTML = '';
+  save(); renderGoals();
+}
+
+function editGoal(goalId) {
+  const g = state.goals.find(x => x.id === goalId);
+  if (!g) return;
+  editingGoalId = goalId;
+  document.getElementById('goalTitle').value = g.title;
+  document.getElementById('goalType').value = g.type;
+  document.getElementById('goalSize').value = g.size;
+  document.getElementById('goalCategory').value = g.category || 'Other';
+  document.getElementById('goalPriority').value = g.priority || 'Med';
+  document.getElementById('subgoalsList').innerHTML = '';
+  (g.subgoals || []).forEach(s => addSubgoalInput(s.text));
+  document.getElementById('saveGoalBtn').textContent = 'Save Changes';
+  document.getElementById('cancelEditBtn').style.display = '';
+  document.getElementById('goalFormTitle').textContent = 'Edit Goal';
+  document.getElementById('goalTitle').focus();
+  document.getElementById('goalTitle').scrollIntoView({behavior:'smooth', block:'center'});
+}
+function cancelEdit() {
+  editingGoalId = null;
+  document.getElementById('goalTitle').value = '';
+  document.getElementById('subgoalsList').innerHTML = '';
+  document.getElementById('saveGoalBtn').textContent = 'Add Goal';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('goalFormTitle').textContent = 'Add a Goal';
+}
+
+function getRewardFor(size) {
+  if (size === 'small') return { small: 1, big: 0, huge: 0 };
+  if (size === 'medium') return { small: 3, big: 0, huge: 0 };
+  if (size === 'big') return { small: 5, big: 1, huge: 0 };
+  if (size === 'huge') return { small: 0, big: 3, huge: 1 };
+  return { small: 1, big: 0, huge: 0 };
+}
+function rewardLabel(size) {
+  const r = getRewardFor(size);
+  let parts = [];
+  if (r.small) parts.push(`${r.small} 🥚`);
+  if (r.big) parts.push(`${r.big} 🥚🥚`);
+  if (r.huge) parts.push(`${r.huge} 🥚🥚🥚`);
+  return parts.join(' + ');
+}
+
+function toggleSubgoal(goalId, subIdx) {
+  const goal = state.goals.find(g => g.id === goalId);
+  if (!goal) return;
+  const sub = goal.subgoals[subIdx];
+  if (sub.done) return;
+  sub.done = true;
+  state.smallEggs += 1;
+  addXP(5);
+  toast('+1 🥚 Small Egg!');
+  playSound('click');
+  save(); renderGoals(); renderStats();
+}
+
+function completeGoal(goalId) {
+  const goal = state.goals.find(g => g.id === goalId);
+  if (!goal) return;
+
+  const today = new Date().toDateString();
+  const dateKey = todayKey();
+
+  if (goal.type === 'daily') {
+    if (goal.lastCompletedDate === today) {
+      toast('Already done today! Come back tomorrow.');
+      return;
+    }
+    // Snapshot for undo
+    lastCompleted = { goalId, prevDate: goal.lastCompletedDate, type: 'daily', size: goal.size, category: goal.category };
+    goal.lastCompletedDate = today;
+    updateStreak();
+  } else {
+    if (goal.completed) return;
+    lastCompleted = { goalId, prevCompleted: goal.completed, type: 'onetime', size: goal.size, category: goal.category };
+    goal.completed = true;
+  }
+
+  const reward = getRewardFor(goal.size);
+  state.smallEggs += reward.small;
+  state.bigEggs += reward.big;
+  state.hugeEggs += reward.huge;
+  state.goalsCompleted += 1;
+  state.completionLog[dateKey] = (state.completionLog[dateKey] || 0) + 1;
+  state.categoriesCompleted[goal.category || 'Other'] = (state.categoriesCompleted[goal.category || 'Other'] || 0) + 1;
+
+  addXP(XP_PER_SIZE[goal.size] || 10);
+  playSound('complete');
+  if (state.settings.fx) burstConfetti();
+
+  // Streak bonus
+  if (state.streak > 0 && state.streak % 7 === 0) {
+    state.bigEggs += 1;
+    toast(`🔥 ${state.streak}-day streak bonus! +1 Big Egg!`, 'achievement');
+  } else {
+    toastWithUndo(`Goal crushed! +${rewardLabel(goal.size)}`);
+  }
+
+  // Check achievements
+  if (state.goalsCompleted === 1) checkAchievement('first_goal');
+  if (state.goalsCompleted === 10) checkAchievement('goals_10');
+  if (state.goalsCompleted === 50) checkAchievement('goals_50');
+  if (state.goalsCompleted === 100) checkAchievement('goals_100');
+  if (state.streak === 3) checkAchievement('streak_3');
+  if (state.streak === 7) checkAchievement('streak_7');
+  if (state.streak === 30) checkAchievement('streak_30');
+  if (goal.size === 'huge') checkAchievement('huge_goal');
+  if ((state.completionLog[dateKey] || 0) >= 5) checkAchievement('productive_day');
+  // All categories check
+  const cats = ['Health','Work','Learning','Creative','Social','Other'];
+  if (cats.every(c => (state.categoriesCompleted[c] || 0) > 0)) checkAchievement('all_categories');
+
+  save(); renderGoals(); renderStats();
+}
+
+function undoLastCompletion() {
+  if (!lastCompleted) return;
+  const goal = state.goals.find(g => g.id === lastCompleted.goalId);
+  if (!goal) { lastCompleted = null; return; }
+
+  // Reverse rewards
+  const r = getRewardFor(lastCompleted.size);
+  state.smallEggs = Math.max(0, state.smallEggs - r.small);
+  state.bigEggs = Math.max(0, state.bigEggs - r.big);
+  state.hugeEggs = Math.max(0, state.hugeEggs - r.huge);
+  state.goalsCompleted = Math.max(0, state.goalsCompleted - 1);
+  state.xp = Math.max(0, state.xp - (XP_PER_SIZE[lastCompleted.size] || 10));
+  recalculateLevel();
+
+  const dateKey = todayKey();
+  if (state.completionLog[dateKey]) {
+    state.completionLog[dateKey] = Math.max(0, state.completionLog[dateKey] - 1);
+    if (state.completionLog[dateKey] === 0) delete state.completionLog[dateKey];
+  }
+  if (state.categoriesCompleted[lastCompleted.category]) {
+    state.categoriesCompleted[lastCompleted.category] = Math.max(0, state.categoriesCompleted[lastCompleted.category] - 1);
+  }
+
+  if (lastCompleted.type === 'daily') {
+    goal.lastCompletedDate = lastCompleted.prevDate;
+  } else {
+    goal.completed = lastCompleted.prevCompleted;
+  }
+  lastCompleted = null;
+  toast('Undone.');
+  save(); renderGoals(); renderStats();
+}
+
+function updateStreak() {
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (state.lastDailyDate === today) return;
+  if (state.lastDailyDate === yesterday) state.streak += 1;
+  else state.streak = 1;
+  state.lastDailyDate = today;
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function deleteGoal(goalId) {
+  if (!confirm('Delete this goal?')) return;
+  state.goals = state.goals.filter(g => g.id !== goalId);
+  save(); renderGoals();
+}
+
+function duplicateGoal(goalId) {
+  const orig = state.goals.find(g => g.id === goalId);
+  if (!orig) return;
+  state.goals.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    title: orig.title + ' (copy)',
+    type: orig.type,
+    size: orig.size,
+    category: orig.category || 'Other',
+    priority: orig.priority || 'Med',
+    subgoals: (orig.subgoals || []).map(s => ({ text: s.text, done: false })),
+    completed: false,
+    lastCompletedDate: null,
+    createdAt: Date.now()
+  });
+  save();
+  renderGoals();
+  toast('Goal duplicated!');
+  playSound('click');
+}
+
+function renderGoals() {
+  const list = document.getElementById('goalsList');
+  let goals = [...state.goals];
+
+  // Filters
+  const fc = document.getElementById('filterCategory').value;
+  const fs = document.getElementById('filterStatus').value;
+  const sb = document.getElementById('sortBy').value;
+  const today = new Date().toDateString();
+  if (fc) goals = goals.filter(g => g.category === fc);
+  if (fs === 'open') goals = goals.filter(g => !g.completed && !(g.type === 'daily' && g.lastCompletedDate === today));
+  if (fs === 'done') goals = goals.filter(g => g.completed || (g.type === 'daily' && g.lastCompletedDate === today));
+
+  // Sort
+  if (sb === 'priority') {
+    const pOrder = { High: 0, Med: 1, Low: 2 };
+    goals.sort((a, b) => (pOrder[a.priority || 'Med'] || 1) - (pOrder[b.priority || 'Med'] || 1));
+  } else if (sb === 'alpha') {
+    goals.sort((a, b) => a.title.localeCompare(b.title));
+  } else {
+    goals.sort((a, b) => (b.createdAt || b.id) - (a.createdAt || a.id));
+  }
+
+  if (goals.length === 0) {
+    list.innerHTML = '<div class="empty-state">No goals match. Try a different filter.</div>';
+    return;
+  }
+
+  list.innerHTML = goals.map(g => {
+    const isDoneToday = g.type === 'daily' && g.lastCompletedDate === today;
+    const isDone = g.completed || isDoneToday;
+    const subDone = (g.subgoals || []).filter(s => s.done).length;
+    const subTotal = (g.subgoals || []).length;
+    const progress = subTotal > 0 ? (subDone / subTotal) * 100 : (isDone ? 100 : 0);
+    const cat = g.category || 'Other';
+    const pri = g.priority || 'Med';
+    return `
+      <div class="goal-card ${isDone ? 'done' : ''} priority-${pri.toLowerCase()}">
+        <div class="goal-header">
+          <div style="flex:1; min-width:0;">
+            <div class="goal-title">${escapeHtml(g.title)}</div>
+            <div class="goal-meta">
+              <span class="goal-tag cat-${cat}">${cat}</span>
+              <span class="goal-tag pri-${pri}">${pri}</span>
+              <span>${g.type === 'daily' ? '🔁 Daily' : '⭐ One-time'} · <span class="goal-reward">${rewardLabel(g.size)}</span> · +${XP_PER_SIZE[g.size] || 10} XP</span>
+            </div>
+          </div>
+        </div>
+        ${subTotal > 0 ? `<div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>` : ''}
+        ${subTotal > 0 ? `
+          <div c
