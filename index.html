@@ -1636,7 +1636,7 @@ const ITEMS = {
     { e: '💫', n: 'Galaxy Cruiser', d: 'Skip between solar systems', t: 'vehicle' },
     { e: '🗿', n: 'Moai Sentinel', d: 'Stares into your soul', t: 'item' },
     { e: '🌈', n: 'Rainbow Bridge Background', d: 'Connects all realms', t: 'background' },
-    { e: '🌙', n: 'Moonraker Staff', d: 'Pulls power from the moon itself', t: 'weapon', power: 83 },
+    { e: '🌙', n: 'Moonraker Staff', d: 'Pulls power from the moon itself.', t: 'weapon', power: 83 },
   ]
 };
 
@@ -2765,4 +2765,2628 @@ function renderGoals() {
         </div>
         ${subTotal > 0 ? `<div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>` : ''}
         ${subTotal > 0 ? `
-          <div c
+          <div class="subgoal-list">
+            ${g.subgoals.map((s, i) => `
+              <div class="subgoal-item ${s.done ? 'done' : ''}">
+                <input type="checkbox" ${s.done ? 'checked disabled' : ''} onchange="toggleSubgoal(${g.id}, ${i})">
+                <span>${escapeHtml(s.text)}</span>
+                <span style="margin-left:auto; color:var(--gold); font-size:0.8em;">+1 🥚</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        <div class="goal-actions">
+          ${!isDone ? `<button class="small success" onclick="completeGoal(${g.id})">✓ Complete${g.type === 'daily' ? ' Today' : ''}</button>` : `<span style="color:var(--green); font-size:0.85em;">✓ ${g.type === 'daily' ? 'Done today' : 'Completed'}</span>`}
+          <button class="small secondary" onclick="editGoal(${g.id})">✏️ Edit</button>
+          <button class="small secondary" onclick="duplicateGoal(${g.id})">📋 Duplicate</button>
+          <button class="small danger" onclick="deleteGoal(${g.id})">🗑 Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============================================================
+// EGGS / HATCHING
+// ============================================================
+function renderEggs() {
+  const list = document.getElementById('eggsList');
+  const summary = document.getElementById('eggCountSummary');
+  const hatchAllBtn = document.getElementById('hatchAllBtn');
+  const total = state.smallEggs + state.bigEggs + state.hugeEggs;
+  if (summary) {
+    summary.textContent = total === 0 ? '' : `${state.smallEggs} small · ${state.bigEggs} big · ${state.hugeEggs} huge (${total} total)`;
+  }
+  if (hatchAllBtn) hatchAllBtn.style.display = total > 0 ? '' : 'none';
+  if (total === 0) {
+    list.innerHTML = '<div class="empty-state">No eggs yet — go crush some goals!</div>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < state.smallEggs; i++) {
+    html += `<div class="egg-card small" onclick="hatchEgg('small')">${eggSvg('small')}<div class="egg-label">Small</div></div>`;
+  }
+  for (let i = 0; i < state.bigEggs; i++) {
+    html += `<div class="egg-card big" onclick="hatchEgg('big')">${eggSvg('big')}<div class="egg-label">Big</div></div>`;
+  }
+  for (let i = 0; i < state.hugeEggs; i++) {
+    html += `<div class="egg-card huge" onclick="hatchEgg('huge')">${eggSvg('huge')}<div class="egg-label">Huge</div></div>`;
+  }
+  list.innerHTML = html;
+}
+
+function hatchEgg(size) {
+  if (size === 'small') { if (state.smallEggs <= 0) return; state.smallEggs--; }
+  else if (size === 'big') { if (state.bigEggs <= 0) return; state.bigEggs--; }
+  else { if (state.hugeEggs <= 0) return; state.hugeEggs--; }
+
+  const item = rollItem(size);
+  state.inventory.push(item);
+  playSound('hatch');
+  save();
+  renderStats();
+  renderEggs();
+  showHatch(item, size);
+
+  // Achievements
+  checkAchievement('first_egg');
+  if (state.inventory.length >= 10) checkAchievement('items_10');
+  if (state.inventory.length >= 50) checkAchievement('items_50');
+  if (['rare','epic','legendary','mythic'].includes(item.rarity)) checkAchievement('rare_item');
+  if (item.rarity === 'mythic') checkAchievement('mythic_item');
+  checkCollectionAchievements();
+}
+
+function rollItem(size) {
+  const rates = DROP_RATES[size];
+  const roll = Math.random();
+  let cumulative = 0;
+  let rarity = 'common';
+  for (const [r, p] of Object.entries(rates)) {
+    cumulative += p;
+    if (roll < cumulative) { rarity = r; break; }
+  }
+  const pool = ITEMS[rarity];
+  const item = pool[Math.floor(Math.random() * pool.length)];
+  return { ...item, rarity, id: Date.now() + Math.random() };
+}
+
+function showHatch(item, size) {
+  const modal = document.getElementById('hatchModal');
+  const emoji = document.getElementById('hatchEmoji');
+  const result = document.getElementById('hatchResult');
+  const title = document.getElementById('hatchTitle');
+  emoji.innerHTML = eggSvg(size, 'modal-egg');
+  emoji.classList.add('hatching');
+  title.textContent = `${size.charAt(0).toUpperCase() + size.slice(1)} Egg Hatching...`;
+  result.style.display = 'none';
+  modal.classList.add('show');
+
+  setTimeout(() => {
+    emoji.classList.remove('hatching');
+    emoji.innerHTML = item.svgKey ? accessorySvg(item.svgKey, 'modal-large') : item.e;
+    title.textContent = '✨ It hatched! ✨';
+    document.getElementById('hatchRarity').textContent = item.rarity;
+    document.getElementById('hatchRarity').className = 'item-rarity ' + item.rarity;
+    document.getElementById('hatchName').textContent = item.n;
+    document.getElementById('hatchDesc').textContent = item.d;
+    result.style.display = 'block';
+    playSound('reveal');
+    if (state.settings.fx) burstConfetti(item.rarity);
+  }, 1500);
+}
+
+function closeHatchModal() {
+  document.getElementById('hatchModal').classList.remove('show');
+}
+
+function hatchAllEggs() {
+  const total = state.smallEggs + state.bigEggs + state.hugeEggs;
+  if (total === 0) { toast('No eggs to hatch!'); return; }
+  if (!confirm(`Hatch all ${total} eggs at once? You'll get a summary of everything.`)) return;
+
+  const results = [];
+  while (state.smallEggs > 0) {
+    state.smallEggs--;
+    const item = rollItem('small');
+    state.inventory.push(item);
+    results.push({ size: 'small', item });
+  }
+  while (state.bigEggs > 0) {
+    state.bigEggs--;
+    const item = rollItem('big');
+    state.inventory.push(item);
+    results.push({ size: 'big', item });
+  }
+  while (state.hugeEggs > 0) {
+    state.hugeEggs--;
+    const item = rollItem('huge');
+    state.inventory.push(item);
+    results.push({ size: 'huge', item });
+  }
+
+  // Trigger achievements
+  checkAchievement('first_egg');
+  if (total >= 10) checkAchievement('speed_hatcher');
+  if (state.inventory.length >= 10) checkAchievement('items_10');
+  if (state.inventory.length >= 50) checkAchievement('items_50');
+  if (results.some(r => ['rare','epic','legendary','mythic'].includes(r.item.rarity))) checkAchievement('rare_item');
+  if (results.some(r => r.item.rarity === 'mythic')) checkAchievement('mythic_item');
+  checkCollectionAchievements();
+
+  playSound('reveal');
+  if (state.settings.fx) {
+    // Bigger confetti for the bulk hatch
+    const hasBig = results.some(r => ['legendary','mythic'].includes(r.item.rarity));
+    burstConfetti(hasBig ? 'mythic' : 'legendary');
+  }
+
+  save();
+  renderStats();
+  renderEggs();
+
+  // Build summary view
+  const summary = document.getElementById('hatchAllSummary');
+  const order = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
+  const grouped = {};
+  results.forEach(r => {
+    if (!grouped[r.item.rarity]) grouped[r.item.rarity] = [];
+    grouped[r.item.rarity].push(r.item);
+  });
+  const rarityNames = ['mythic','legendary','epic','rare','uncommon','common'];
+  let html = `<div style="text-align:center; margin-bottom:16px; color:var(--gold); font-size:1.1em;">Hatched ${total} eggs and got ${results.length} items!</div>`;
+  rarityNames.forEach(r => {
+    const items = grouped[r];
+    if (!items || items.length === 0) return;
+    html += `<div style="margin-bottom:14px;">
+      <div class="item-rarity ${r}" style="font-size:0.95em; margin-bottom:6px;">${r} (${items.length})</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">`;
+    // Group same items
+    const counts = {};
+    items.forEach(i => { counts[i.n] = (counts[i.n] || 0) + 1; if (!counts['_e_'+i.n]) counts['_e_'+i.n] = i.e; });
+    Object.keys(counts).filter(k => !k.startsWith('_e_')).forEach(name => {
+      const ct = counts[name];
+      const e = counts['_e_'+name];
+      html += `<div class="item-card ${r}" style="min-width:120px;">
+        <div class="item-emoji">${e}</div>
+        <div class="item-name">${escapeHtml(name)}${ct > 1 ? ` ×${ct}` : ''}</div>
+        <div class="item-rarity ${r}">${r}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  summary.innerHTML = html;
+  document.getElementById('hatchAllModal').classList.add('show');
+}
+
+function closeHatchAllModal() {
+  document.getElementById('hatchAllModal').classList.remove('show');
+}
+
+// ============================================================
+// INVENTORY + EQUIP
+// ============================================================
+let invFilter = 'all';
+function renderInventory() {
+  const list = document.getElementById('inventoryList');
+  if (state.inventory.length === 0) {
+    list.innerHTML = '<div class="empty-state">Hatch some eggs to see what you got!</div>';
+    return;
+  }
+  const order = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
+  let inv = [...state.inventory];
+  if (invFilter !== 'all') inv = inv.filter(i => i.t === invFilter);
+  inv.sort((a, b) => order[a.rarity] - order[b.rarity]);
+  if (inv.length === 0) {
+    list.innerHTML = '<div class="empty-state">Nothing in this category yet.</div>';
+    return;
+  }
+  list.innerHTML = inv.map(item => {
+    const slot = getSlotForType(item.t);
+    const isEquipped = slot && state.equipped[slot] && state.equipped[slot].id === item.id;
+    return `
+    <div class="item-card ${item.rarity} ${isEquipped ? 'equipped' : ''}" onclick="equipItem('${item.id}')">
+      ${item.svgKey ? accessorySvg(item.svgKey) : `<div class="item-emoji">${item.e}</div>`}
+      <div class="item-name">${escapeHtml(item.n)}</div>
+      <div class="item-rarity ${item.rarity}">${item.rarity}</div>
+      <div style="font-size:0.7em; color:var(--text-dim); margin-top:3px;">${item.t}</div>
+    </div>
+  `;
+  }).join('');
+}
+
+function getSlotForType(t) {
+  if (t === 'pet') return 'pet';
+  if (t === 'weapon') return 'weapon';
+  if (t === 'accessory') return 'hat';
+  if (t === 'background') return 'background';
+  if (t === 'vehicle') return 'vehicle';
+  if (t === 'frame') return 'frame';
+  return null;
+}
+
+function applyAvatarFrame() {
+  const wrapper = document.getElementById('avatarFrame');
+  if (!wrapper) return;
+  // Remove all frame-* classes, keep base class
+  wrapper.className = 'avatar-frame';
+  if (state.equipped && state.equipped.frame && state.equipped.frame.frameClass) {
+    wrapper.classList.add('frame-' + state.equipped.frame.frameClass);
+  }
+}
+
+function equipItem(itemId) {
+  const item = state.inventory.find(i => String(i.id) === String(itemId));
+  if (!item) return;
+  const slot = getSlotForType(item.t);
+  if (!slot) { toast('This item can\'t be equipped — it lives in your inventory.'); return; }
+  if (state.equipped[slot] && state.equipped[slot].id === item.id) {
+    state.equipped[slot] = null;
+    toast(`Unequipped ${item.n}`);
+  } else {
+    state.equipped[slot] = item;
+    toast(`Equipped ${item.e} ${item.n}`);
+  }
+  playSound('click');
+  if (allSlotsEquipped()) checkAchievement('fully_loaded');
+  save();
+  drawAvatar();
+  renderInventory();
+  updateWarehouseStatus();
+}
+
+document.querySelectorAll('.inv-tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.inv-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    invFilter = t.dataset.cat;
+    renderInventory();
+  };
+});
+
+// ============================================================
+// XP / LEVELS
+// ============================================================
+function xpForLevel(lvl) {
+  // Quadratic-ish curve
+  return Math.round(50 + 50 * lvl + 25 * lvl * lvl);
+}
+function totalXpForLevel(lvl) {
+  let total = 0;
+  for (let i = 1; i < lvl; i++) total += xpForLevel(i);
+  return total;
+}
+function recalculateLevel() {
+  let lvl = 1;
+  let total = 0;
+  while (state.xp >= total + xpForLevel(lvl)) {
+    total += xpForLevel(lvl);
+    lvl++;
+  }
+  state.level = lvl;
+}
+function addXP(amount) {
+  const oldLevel = state.level;
+  state.xp += amount;
+  recalculateLevel();
+  if (state.level > oldLevel) {
+    toast(`⭐ LEVEL UP! You're now level ${state.level}!`, 'levelup');
+    playSound('levelup');
+    if (state.settings.fx) burstConfetti('legendary');
+    if (state.level >= 5) checkAchievement('level_5');
+    if (state.level >= 10) checkAchievement('level_10');
+  }
+  save();
+  renderStats();
+}
+
+// ============================================================
+// ACHIEVEMENTS
+// ============================================================
+function checkAchievement(id) {
+  if (state.achievements[id]) return;
+  const a = ACHIEVEMENTS.find(x => x.id === id);
+  if (!a) return;
+  state.achievements[id] = new Date().toISOString();
+  toast(`🏆 ${a.n} unlocked! +${a.xp} XP`, 'achievement');
+  state.xp += a.xp;
+  recalculateLevel();
+  playSound('achievement');
+  save();
+  renderStats();
+  renderAchievements();
+}
+
+function renderAchievements() {
+  const list = document.getElementById('achievementsList');
+  list.innerHTML = ACHIEVEMENTS.map(a => {
+    const unlocked = !!state.achievements[a.id];
+    return `
+      <div class="achievement ${unlocked ? 'unlocked' : ''}">
+        <div class="achievement-icon">${a.icon}</div>
+        <div class="achievement-info">
+          <div class="achievement-name">${a.n}</div>
+          <div class="achievement-desc">${a.d}</div>
+          <div style="font-size:0.7em; color:var(--gold);">+${a.xp} XP</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// STATS DASHBOARD
+// ============================================================
+function renderStatsTab() {
+  // Heatmap (last 60 days)
+  const heat = document.getElementById('heatmap');
+  const now = new Date();
+  const days = [];
+  for (let i = 59; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const count = state.completionLog[key] || 0;
+    let lvl = 0;
+    if (count >= 1) lvl = 1;
+    if (count >= 3) lvl = 2;
+    if (count >= 5) lvl = 3;
+    if (count >= 8) lvl = 4;
+    days.push({ key, count, lvl, label: d.toLocaleDateString() });
+  }
+  heat.innerHTML = days.map(d => `<div class="heat-cell lvl-${d.lvl}" title="${d.label}: ${d.count} goals"></div>`).join('');
+
+  // Category breakdown
+  const cats = ['Health','Work','Learning','Creative','Social','Other'];
+  const maxCat = Math.max(1, ...cats.map(c => state.categoriesCompleted[c] || 0));
+  const cb = document.getElementById('categoryBreakdown');
+  cb.innerHTML = cats.map(c => {
+    const v = state.categoriesCompleted[c] || 0;
+    return `<div class="breakdown-row">
+      <span class="goal-tag cat-${c}">${c}</span>
+      <div class="breakdown-bar"><div class="breakdown-bar-fill" style="width:${(v/maxCat)*100}%"></div></div>
+      <span style="min-width:30px; text-align:right;">${v}</span>
+    </div>`;
+  }).join('');
+
+  // Rarity breakdown
+  const rarities = ['common','uncommon','rare','epic','legendary','mythic'];
+  const rcounts = {}; rarities.forEach(r => rcounts[r] = 0);
+  state.inventory.forEach(i => rcounts[i.rarity] = (rcounts[i.rarity] || 0) + 1);
+  const maxR = Math.max(1, ...rarities.map(r => rcounts[r]));
+  const rb = document.getElementById('rarityBreakdown');
+  rb.innerHTML = rarities.map(r => `<div class="breakdown-row">
+    <span class="item-rarity ${r}">${r}</span>
+    <div class="breakdown-bar"><div class="breakdown-bar-fill" style="width:${(rcounts[r]/maxR)*100}%; background:${rarityColor(r)};"></div></div>
+    <span style="min-width:30px; text-align:right;">${rcounts[r]}</span>
+  </div>`).join('');
+
+  // Lifetime stats
+  const lt = document.getElementById('lifetimeStats');
+  const totalCompletions = Object.values(state.completionLog).reduce((a,b)=>a+b, 0);
+  const subgoalCount = state.goals.reduce((acc, g) => acc + (g.subgoals||[]).filter(s=>s.done).length, 0);
+  const unlocked = Object.keys(state.achievements).length;
+  lt.innerHTML = [
+    ['Total goals crushed', state.goalsCompleted],
+    ['Sub-goals completed', subgoalCount],
+    ['Days active', Object.keys(state.completionLog).length],
+    ['Items hatched', state.inventory.length],
+    ['Achievements', `${unlocked}/${ACHIEVEMENTS.length}`],
+    ['Best streak', state.streak],
+    ['Current level', state.level],
+    ['Total XP', state.xp],
+  ].map(([k,v]) => `<div class="stat-box"><div class="num">${v}</div><div class="label">${k}</div></div>`).join('');
+}
+
+function rarityColor(r) {
+  return ({common:'#95a5a6',uncommon:'#00b894',rare:'#0984e3',epic:'#a29bfe',legendary:'#fdcb6e',mythic:'#e84393'})[r];
+}
+
+// ============================================================
+// WAREHOUSE (2D walkable scene)
+// ============================================================
+const wh = {
+  canvas: null,
+  ctx: null,
+  keys: {},
+  decorations: [], // placed items
+  petPos: { x: 320, y: 220 },
+  petTrail: [], // last avatar positions for pet to follow
+  rafId: null,
+  lastTime: 0,
+  // Scene: 'hatchery' or 'trophy'
+  scene: 'hatchery',
+  // Marketplace stall in the Hatchery
+  stall: { x: 480, y: 110, w: 90, h: 64 },
+  nearStall: false,
+  // Doors
+  trophyDoor: { x: 8, y: 30, w: 50, h: 50 },     // left side of Hatchery → Trophy Room
+  garageDoor: { x: 542, y: 30, w: 50, h: 50 },   // right side of Hatchery → Garage
+  colosseumDoor: { x: 275, y: 30, w: 50, h: 50 }, // center of Hatchery → Colosseum
+  hatcheryDoor: { x: 542, y: 30, w: 50, h: 50 }, // return door — position changes per scene
+  nearTrophyDoor: false,
+  nearGarageDoor: false,
+  nearColosseumDoor: false,
+  nearHatcheryDoor: false,
+  nearLeftPedestal: false,
+  nearRightPedestal: false,
+  ePressed: false,
+  // Per-scene avatar positions
+  trophyAvatarPos: { x: 100, y: 320 },
+  garageAvatarPos: { x: 100, y: 320 },
+  colosseumAvatarPos: { x: 200, y: 320 },
+  // Colosseum pedestals
+  leftPedestal: { x: 180, y: 300, w: 60, h: 30 },
+  rightPedestal: { x: 360, y: 300, w: 60, h: 30 },
+  cameraX: 0
+};
+
+// Sword Steve practice opponent
+const SWORD_STEVE = {
+  name: 'Sword Steve',
+  e: '🧙‍♂️',
+  // Avatar override colors (green skin, white beard)
+  avatar: {
+    skin: '#7fb069', hair: '#fff', hairStyle: 'long',
+    shirt: '#3a5a40', shirtStyle: 'tee',
+    eyes: '#000', eyeShape: 'round',
+    mouth: 'neutral', brows: 'thick', face: 'square',
+    feature: 'none', pants: '#3a5a40', pantsStyle: 'pants',
+    shoes: '#5d3a1a', name: 'Sword Steve'
+  },
+  arsenal: [
+    { e: '🗡️', n: "Wooden Sword",   power: 8,  rarity: 'common',    t: 'weapon' },
+    { e: '⚔️', n: "Iron Sword",     power: 14, rarity: 'uncommon',  t: 'weapon' },
+    { e: '🗡️', n: "Steel Sword",    power: 22, rarity: 'rare',      t: 'weapon' },
+    { e: '⚔️', n: "Greatsword",     power: 32, rarity: 'epic',      t: 'weapon' },
+    { e: '🗡️', n: "Excalibur",      power: 55, rarity: 'legendary', t: 'weapon' }
+  ]
+};
+
+// Wager rarity → max combined weapon power
+const WAGER_POWER_CAPS = {
+  common: 30, uncommon: 60, rare: 100, epic: 150, legendary: 200, mythic: 300
+};
+
+// Match state (transient — not persisted)
+let colosseumMatch = null;
+
+function initWarehouse() {
+  wh.canvas = document.getElementById('warehouseCanvas');
+  wh.ctx = wh.canvas.getContext('2d');
+  wh.ctx.imageSmoothingEnabled = false;
+
+  // Resize for clarity
+  const dpr = window.devicePixelRatio || 1;
+  // we'll keep logical 600x400 but draw upscaled
+  // Listen to keys (only when hatchery is active)
+  window.addEventListener('keydown', (e) => {
+    // Don't steal keystrokes from text inputs anywhere in the app
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    // Don't run in simple mode either
+    if (state.settings && state.settings.simpleMode) return;
+    if (!document.getElementById('tab-warehouse').classList.contains('active')) return;
+    const k = e.key.toLowerCase();
+    wh.keys[k] = true;
+    if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k) ||
+        ['w','a','s','d'].includes(k)) {
+      e.preventDefault();
+    }
+    // E to interact with whatever is nearby
+    if (k === 'e' && !wh.ePressed) {
+      wh.ePressed = true;
+      if (wh.scene === 'hatchery' && wh.nearStall) {
+        openMarketplace();
+      } else if (wh.scene === 'hatchery' && wh.nearTrophyDoor) {
+        enterTrophyRoom();
+      } else if (wh.scene === 'hatchery' && wh.nearGarageDoor) {
+        enterGarage();
+      } else if (wh.scene === 'hatchery' && wh.nearColosseumDoor) {
+        enterColosseum();
+      } else if (wh.scene === 'colosseum' && wh.nearLeftPedestal) {
+        startColosseumMatch();
+      } else if (wh.scene !== 'hatchery' && wh.nearHatcheryDoor) {
+        enterHatchery();
+      }
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    wh.keys[k] = false;
+    if (k === 'e') wh.ePressed = false;
+  });
+
+  // Click on canvas to interact with stalls / doors
+  wh.canvas.addEventListener('click', (e) => {
+    const rect = wh.canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * (wh.canvas.width / rect.width);
+    const sy = (e.clientY - rect.top) * (wh.canvas.height / rect.height);
+    if (wh.scene === 'hatchery') {
+      const s = wh.stall;
+      if (sx >= s.x && sx <= s.x + s.w && sy >= s.y && sy <= s.y + s.h) {
+        openMarketplace();
+        return;
+      }
+      const td = wh.trophyDoor;
+      if (sx >= td.x && sx <= td.x + td.w && sy >= td.y && sy <= td.y + td.h) {
+        enterTrophyRoom();
+        return;
+      }
+      const gd = wh.garageDoor;
+      if (sx >= gd.x && sx <= gd.x + gd.w && sy >= gd.y && sy <= gd.y + gd.h) {
+        enterGarage();
+        return;
+      }
+      const cd = wh.colosseumDoor;
+      if (sx >= cd.x && sx <= cd.x + cd.w && sy >= cd.y && sy <= cd.y + cd.h) {
+        enterColosseum();
+        return;
+      }
+    } else if (wh.scene === 'colosseum') {
+      const lp = wh.leftPedestal;
+      if (sx >= lp.x && sx <= lp.x + lp.w && sy >= lp.y && sy <= lp.y + lp.h) {
+        startColosseumMatch();
+        return;
+      }
+      const d = wh.hatcheryDoor;
+      if (sx >= d.x && sx <= d.x + d.w && sy >= d.y && sy <= d.y + d.h) {
+        enterHatchery();
+        return;
+      }
+    } else if (wh.scene === 'trophy' || wh.scene === 'garage') {
+      const d = wh.hatcheryDoor;
+      if (sx >= d.x && sx <= d.x + d.w && sy >= d.y && sy <= d.y + d.h) {
+        enterHatchery();
+        return;
+      }
+    }
+  });
+
+  buildDecorations();
+  if (state.warehouseAvatarPos) {
+    // ok
+  } else {
+    state.warehouseAvatarPos = { x: 300, y: 200 };
+  }
+  startWarehouseLoop();
+}
+
+function buildDecorations() {
+  // Place each non-equipped, non-pet item as a decoration somewhere
+  wh.decorations = [];
+  const W = 600, H = 400;
+  let i = 0;
+  state.inventory.forEach(item => {
+    if (item.t === 'pet') return; // pets are handled by equip
+    if (item.t === 'background') return; // background is full-room
+    // Use deterministic pseudo-random based on item id
+    const seed = (typeof item.id === 'string' ? item.id.length : item.id) + i * 17;
+    const x = 60 + ((seed * 73) % (W - 120));
+    const y = 120 + ((seed * 41) % (H - 200));
+    wh.decorations.push({ x, y, item });
+    i++;
+  });
+}
+
+function startWarehouseLoop() {
+  if (wh.rafId) cancelAnimationFrame(wh.rafId);
+  wh.lastTime = performance.now();
+  const tick = (now) => {
+    const dt = Math.min(50, now - wh.lastTime);
+    wh.lastTime = now;
+    updateWarehouse(dt);
+    drawWarehouse();
+    wh.rafId = requestAnimationFrame(tick);
+  };
+  wh.rafId = requestAnimationFrame(tick);
+}
+
+function updateWarehouse(dt) {
+  if (!document.getElementById('tab-warehouse').classList.contains('active')) return;
+  const speed = 0.18;
+  const k = wh.keys;
+  let dx = 0, dy = 0;
+  if (k['w'] || k['arrowup']) dy -= 1;
+  if (k['s'] || k['arrowdown']) dy += 1;
+  if (k['a'] || k['arrowleft']) dx -= 1;
+  if (k['d'] || k['arrowright']) dx += 1;
+  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+  let p;
+  if (wh.scene === 'hatchery') p = state.warehouseAvatarPos;
+  else if (wh.scene === 'trophy') p = wh.trophyAvatarPos;
+  else if (wh.scene === 'garage') p = wh.garageAvatarPos;
+  else if (wh.scene === 'colosseum') p = wh.colosseumAvatarPos;
+  else p = state.warehouseAvatarPos;
+  p.x = Math.max(40, Math.min(560, p.x + dx * speed * dt));
+  p.y = Math.max(80, Math.min(360, p.y + dy * speed * dt));
+
+  // Track avatar trail for pet
+  if (dx || dy) {
+    wh.petTrail.push({ x: p.x, y: p.y });
+    if (wh.petTrail.length > 30) wh.petTrail.shift();
+  }
+  // Pet follows
+  if (state.equipped.pet && wh.petTrail.length > 15) {
+    const target = wh.petTrail[Math.max(0, wh.petTrail.length - 15)];
+    wh.petPos.x += (target.x + 22 - wh.petPos.x) * 0.1;
+    wh.petPos.y += (target.y + 5 - wh.petPos.y) * 0.1;
+  }
+
+  if (wh.scene === 'hatchery') {
+    const s = wh.stall;
+    wh.nearStall = (p.x - (s.x + s.w/2)) ** 2 + (p.y - (s.y + s.h)) ** 2 < 80 * 80;
+    const td = wh.trophyDoor;
+    wh.nearTrophyDoor = (p.x - (td.x + td.w/2)) ** 2 + (p.y - (td.y + td.h)) ** 2 < 70 * 70;
+    const gd = wh.garageDoor;
+    wh.nearGarageDoor = (p.x - (gd.x + gd.w/2)) ** 2 + (p.y - (gd.y + gd.h)) ** 2 < 70 * 70;
+    const cd = wh.colosseumDoor;
+    wh.nearColosseumDoor = (p.x - (cd.x + cd.w/2)) ** 2 + (p.y - (cd.y + cd.h)) ** 2 < 70 * 70;
+    wh.nearHatcheryDoor = false;
+    wh.nearLeftPedestal = false;
+    wh.nearRightPedestal = false;
+  } else if (wh.scene === 'colosseum') {
+    wh.nearStall = false;
+    wh.nearTrophyDoor = false;
+    wh.nearGarageDoor = false;
+    wh.nearColosseumDoor = false;
+    const hd = wh.hatcheryDoor;
+    wh.nearHatcheryDoor = (p.x - (hd.x + hd.w/2)) ** 2 + (p.y - (hd.y + hd.h)) ** 2 < 70 * 70;
+    const lp = wh.leftPedestal;
+    wh.nearLeftPedestal = p.x >= lp.x - 20 && p.x <= lp.x + lp.w + 20 && p.y >= lp.y - 20 && p.y <= lp.y + lp.h + 30;
+    const rp = wh.rightPedestal;
+    wh.nearRightPedestal = p.x >= rp.x - 20 && p.x <= rp.x + rp.w + 20 && p.y >= rp.y - 20 && p.y <= rp.y + rp.h + 30;
+  } else {
+    wh.nearStall = false;
+    wh.nearTrophyDoor = false;
+    wh.nearGarageDoor = false;
+    wh.nearColosseumDoor = false;
+    wh.nearLeftPedestal = false;
+    wh.nearRightPedestal = false;
+    const hd = wh.hatcheryDoor;
+    wh.nearHatcheryDoor = (p.x - (hd.x + hd.w/2)) ** 2 + (p.y - (hd.y + hd.h)) ** 2 < 70 * 70;
+  }
+}
+
+function drawWarehouse() {
+  const ctx = wh.ctx;
+  const W = wh.canvas.width;
+  const H = wh.canvas.height;
+  ctx.imageSmoothingEnabled = false;
+
+  if (wh.scene === 'trophy') {
+    drawTrophyRoom(ctx, W, H);
+    return;
+  }
+  if (wh.scene === 'garage') {
+    drawGarage(ctx, W, H);
+    return;
+  }
+  if (wh.scene === 'colosseum') {
+    drawColosseum(ctx, W, H);
+    return;
+  }
+
+  // Background (depending on equipped)
+  drawWarehouseBackground(ctx, W, H);
+
+  // Floor grid
+  ctx.fillStyle = 'rgba(255,215,0,0.05)';
+  for (let x = 0; x < W; x += 40) {
+    ctx.fillRect(x, 80, 1, H - 80);
+  }
+  for (let y = 80; y < H; y += 40) {
+    ctx.fillRect(0, y, W, 1);
+  }
+
+  // Draw the marketplace stall (always behind avatar based on its base Y)
+  drawMarketplaceStall(ctx, wh.stall);
+
+  // Draw the trophy, colosseum, and garage doors
+  drawTrophyDoor(ctx, wh.trophyDoor);
+  drawColosseumDoor(ctx, wh.colosseumDoor);
+  drawGarageDoor(ctx, wh.garageDoor);
+
+  // Sort decorations and avatar by Y for fake depth
+  const items = [];
+  wh.decorations.forEach(d => items.push({ y: d.y, type: 'deco', d }));
+  items.push({ y: state.warehouseAvatarPos.y, type: 'avatar' });
+  if (state.equipped.pet) items.push({ y: wh.petPos.y, type: 'pet' });
+  if (state.equipped.vehicle) items.push({ y: state.warehouseAvatarPos.y + 5, type: 'vehicle' });
+  items.sort((a,b) => a.y - b.y);
+
+  items.forEach(it => {
+    if (it.type === 'deco') {
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(it.d.x, it.d.y + 16, 14, 4, 0, 0, Math.PI*2);
+      ctx.fill();
+      // Item emoji
+      ctx.font = '32px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(it.d.item.e, it.d.x, it.d.y);
+      // rarity glow
+      if (['legendary','mythic'].includes(it.d.item.rarity)) {
+        ctx.fillStyle = it.d.item.rarity === 'mythic' ? 'rgba(232,67,147,0.3)' : 'rgba(253,203,110,0.3)';
+        ctx.beginPath();
+        ctx.arc(it.d.x, it.d.y, 22, 0, Math.PI*2);
+        ctx.fill();
+      }
+    } else if (it.type === 'avatar') {
+      // shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(state.warehouseAvatarPos.x, state.warehouseAvatarPos.y + 30, 18, 5, 0, 0, Math.PI*2);
+      ctx.fill();
+      // chibi avatar at scale 2
+      drawChibi(ctx, state.warehouseAvatarPos.x, state.warehouseAvatarPos.y + 32, 2, state.avatar, { equipped: state.equipped });
+    } else if (it.type === 'pet') {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(wh.petPos.x, wh.petPos.y + 18, 14, 4, 0, 0, Math.PI*2);
+      ctx.fill();
+      drawPetSprite(ctx, wh.petPos.x, wh.petPos.y, state.equipped.pet, 1.4);
+    } else if (it.type === 'vehicle') {
+      ctx.font = '36px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(state.equipped.vehicle.e, state.warehouseAvatarPos.x + 50, state.warehouseAvatarPos.y + 5);
+    }
+  });
+
+  // Press E prompts (always on top)
+  drawMarketplacePrompt(ctx, wh.stall);
+  if (wh.nearTrophyDoor) {
+    drawDoorPrompt(ctx, wh.trophyDoor.x + wh.trophyDoor.w/2, wh.trophyDoor.y - 36);
+  }
+  if (wh.nearGarageDoor) {
+    drawDoorPrompt(ctx, wh.garageDoor.x + wh.garageDoor.w/2, wh.garageDoor.y - 36);
+  }
+  if (wh.nearColosseumDoor) {
+    drawDoorPrompt(ctx, wh.colosseumDoor.x + wh.colosseumDoor.w/2, wh.colosseumDoor.y - 36);
+  }
+
+  // Top wall info
+  ctx.fillStyle = 'rgba(255,215,0,0.5)';
+  ctx.font = 'bold 14px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(state.avatar.name ? `${state.avatar.name}'s Hatchery` : 'The Hatchery', W/2, 8);
+}
+
+function drawWarehouseBackground(ctx, W, H) {
+  // Background image based on equipped, otherwise default
+  let theme = 'default';
+  if (state.equipped.background) {
+    const bg = state.equipped.background;
+    if (bg.n.includes('Forest')) theme = 'forest';
+    else if (bg.n.includes('Beach')) theme = 'beach';
+    else if (bg.n.includes('Castle')) theme = 'castle';
+    else if (bg.n.includes('City')) theme = 'city';
+    else if (bg.n.includes('Galaxy')) theme = 'galaxy';
+    else if (bg.n.includes('Volcano')) theme = 'volcano';
+  }
+
+  // Sky/wall (top portion)
+  let skyTop = '#3a4570', skyBot = '#5a6590', floorColor = '#4a3520', floorDot = 'rgba(255,255,255,0.04)';
+  if (theme === 'forest') { skyTop = '#1a3a1a'; skyBot = '#2a5a3a'; floorColor = '#3a2510'; }
+  if (theme === 'beach') { skyTop = '#76c5e0'; skyBot = '#a8d8e8'; floorColor = '#e8d098'; }
+  if (theme === 'castle') { skyTop = '#3a3a4a'; skyBot = '#5a5a6a'; floorColor = '#5a4030'; }
+  if (theme === 'city') { skyTop = '#1a1a3a'; skyBot = '#2a2a4a'; floorColor = '#2a2a35'; }
+  if (theme === 'galaxy') { skyTop = '#0a0518'; skyBot = '#2a1850'; floorColor = '#1a0a2a'; }
+  if (theme === 'volcano') { skyTop = '#3a0a0a'; skyBot = '#7a2a0a'; floorColor = '#3a1505'; }
+
+  // Wall gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, 80);
+  grad.addColorStop(0, skyTop);
+  grad.addColorStop(1, skyBot);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, 80);
+
+  // Floor
+  ctx.fillStyle = floorColor;
+  ctx.fillRect(0, 80, W, H - 80);
+
+  // Theme decorations
+  if (theme === 'galaxy') {
+    // stars
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 40; i++) {
+      const sx = (i * 137) % W;
+      const sy = (i * 53) % 78;
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+  }
+  if (theme === 'forest') {
+    // tree silhouettes
+    ctx.fillStyle = '#0a200a';
+    for (let i = 0; i < 5; i++) {
+      const tx = 60 + i * 130;
+      ctx.fillRect(tx, 30, 14, 50);
+      ctx.beginPath();
+      ctx.arc(tx + 7, 30, 18, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  if (theme === 'castle') {
+    ctx.fillStyle = '#2a2a35';
+    for (let i = 0; i < W; i += 60) {
+      ctx.fillRect(i, 20, 30, 60);
+      ctx.fillRect(i+5, 10, 6, 14);
+      ctx.fillRect(i+20, 10, 6, 14);
+    }
+  }
+  if (theme === 'city') {
+    ctx.fillStyle = '#0a0a1a';
+    for (let i = 0; i < 6; i++) {
+      const bx = i * 100 + 10;
+      const bh = 30 + (i*17)%40;
+      ctx.fillRect(bx, 80 - bh, 70, bh);
+      // windows
+      ctx.fillStyle = '#f1c40f';
+      for (let wy = 80 - bh + 4; wy < 76; wy += 8) {
+        for (let wx = bx + 4; wx < bx + 66; wx += 10) {
+          if ((wx + wy) % 7 < 4) ctx.fillRect(wx, wy, 4, 4);
+        }
+      }
+      ctx.fillStyle = '#0a0a1a';
+    }
+  }
+  if (theme === 'volcano') {
+    ctx.fillStyle = '#5a0505';
+    ctx.beginPath();
+    ctx.moveTo(W/2 - 80, 80);
+    ctx.lineTo(W/2, 10);
+    ctx.lineTo(W/2 + 80, 80);
+    ctx.fill();
+    ctx.fillStyle = '#ff4400';
+    ctx.fillRect(W/2 - 10, 10, 20, 8);
+  }
+  if (theme === 'beach') {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(80, 30, 18, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(95, 25, 14, 0, Math.PI*2); ctx.fill();
+    // sun
+    ctx.fillStyle = '#ffeb3b';
+    ctx.beginPath(); ctx.arc(W - 80, 30, 16, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Floor texture
+  ctx.fillStyle = floorDot;
+  for (let i = 0; i < 100; i++) {
+    const fx = (i * 73) % W;
+    const fy = 80 + ((i * 41) % (H - 80));
+    ctx.fillRect(fx, fy, 1, 1);
+  }
+
+  // Wall/floor seam
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(0, 78, W, 4);
+}
+
+function updateWarehouseStatus() {
+  const pet = state.equipped.pet;
+  document.getElementById('equippedPet').textContent = pet ? `${pet.e} ${pet.n}` : 'none';
+  const equippedCount = Object.values(state.equipped).filter(Boolean).length;
+  document.getElementById('warehouseStatus').textContent = equippedCount > 0
+    ? `${equippedCount} item${equippedCount>1?'s':''} equipped. ${state.inventory.length - equippedCount} on display.`
+    : `${state.inventory.length} items on display in The Hatchery.`;
+}
+
+function drawMarketplaceStall(ctx, s) {
+  // Awning (gold-striped)
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(s.x - 4, s.y - 12, s.w + 8, 12);
+  ctx.fillStyle = '#c79100';
+  for (let i = 0; i < s.w + 8; i += 10) {
+    ctx.fillRect(s.x - 4 + i, s.y - 12, 5, 12);
+  }
+  // Awning frill
+  ctx.fillStyle = '#ffd700';
+  for (let i = 0; i < s.w + 8; i += 8) {
+    ctx.beginPath();
+    ctx.moveTo(s.x - 4 + i, s.y);
+    ctx.lineTo(s.x - 4 + i + 4, s.y + 4);
+    ctx.lineTo(s.x - 4 + i + 8, s.y);
+    ctx.fill();
+  }
+
+  // Counter base (wood)
+  ctx.fillStyle = '#5d3a1a';
+  ctx.fillRect(s.x, s.y + 24, s.w, s.h - 24);
+  ctx.fillStyle = '#8b5a3c';
+  ctx.fillRect(s.x, s.y + 24, s.w, 4); // counter top
+  // Wood grain
+  ctx.fillStyle = '#3a2410';
+  for (let i = 0; i < s.w; i += 8) {
+    ctx.fillRect(s.x + i, s.y + 30, 1, s.h - 30);
+  }
+
+  // Sign
+  ctx.fillStyle = '#2c1810';
+  ctx.fillRect(s.x + 4, s.y + 4, s.w - 8, 18);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('EGG MARKET', s.x + s.w / 2, s.y + 13);
+
+  // Eggs displayed on the counter
+  ctx.font = '14px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🥚', s.x + 18, s.y + 36);
+  ctx.font = '18px serif';
+  ctx.fillText('🥚', s.x + s.w/2, s.y + 38);
+  ctx.font = '22px serif';
+  ctx.fillText('🥚', s.x + s.w - 18, s.y + 40);
+
+  // Glow if near (drawn before avatar pass)
+  if (wh.nearStall) {
+    ctx.fillStyle = 'rgba(255,215,0,0.18)';
+    ctx.fillRect(s.x - 8, s.y - 14, s.w + 16, s.h + 14);
+  }
+}
+
+function drawMarketplacePrompt(ctx, s) {
+  if (!wh.nearStall) return;
+  drawDoorPrompt(ctx, s.x + s.w/2, s.y - 32);
+}
+
+function drawDoorPrompt(ctx, cx, cy) {
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(cx - 40, cy, 80, 18);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('▼ Press E ▼', cx, cy + 9);
+}
+
+function drawTrophyDoor(ctx, d) {
+  // Door frame (stone-arched entry)
+  ctx.fillStyle = '#3a2410';
+  ctx.fillRect(d.x - 4, d.y - 6, d.w + 8, d.h + 6);
+  // Door
+  ctx.fillStyle = '#5d3a1a';
+  ctx.fillRect(d.x, d.y, d.w, d.h);
+  // Door panels
+  ctx.fillStyle = '#3a2410';
+  ctx.fillRect(d.x + 4, d.y + 4, d.w - 8, (d.h - 12) / 2);
+  ctx.fillRect(d.x + 4, d.y + d.h/2 + 4, d.w - 8, (d.h - 12) / 2);
+  // Knob
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(d.x + d.w - 8, d.y + d.h/2, 2, 0, Math.PI*2);
+  ctx.fill();
+  // Sign above the door
+  ctx.fillStyle = '#2c1810';
+  ctx.fillRect(d.x - 8, d.y - 18, d.w + 16, 14);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏆 TROPHIES', d.x + d.w/2, d.y - 11);
+  // Glow if near
+  if (wh.nearTrophyDoor) {
+    ctx.fillStyle = 'rgba(255,215,0,0.18)';
+    ctx.fillRect(d.x - 8, d.y - 22, d.w + 16, d.h + 26);
+  }
+}
+
+function drawHatcheryDoor(ctx, d) {
+  // Door (return door from trophy room — bigger and more ornate)
+  ctx.fillStyle = '#3a2410';
+  ctx.fillRect(d.x - 4, d.y - 6, d.w + 8, d.h + 6);
+  ctx.fillStyle = '#5d3a1a';
+  ctx.fillRect(d.x, d.y, d.w, d.h);
+  ctx.fillStyle = '#3a2410';
+  ctx.fillRect(d.x + 4, d.y + 4, d.w - 8, (d.h - 12) / 2);
+  ctx.fillRect(d.x + 4, d.y + d.h/2 + 4, d.w - 8, (d.h - 12) / 2);
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(d.x + 8, d.y + d.h/2, 2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#2c1810';
+  ctx.fillRect(d.x - 8, d.y - 18, d.w + 16, 14);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏠 HATCHERY', d.x + d.w/2, d.y - 11);
+  if (wh.nearHatcheryDoor) {
+    ctx.fillStyle = 'rgba(255,215,0,0.18)';
+    ctx.fillRect(d.x - 8, d.y - 22, d.w + 16, d.h + 26);
+  }
+}
+
+function drawTrophyRoom(ctx, W, H) {
+  // Background — long ornate hallway
+  // Top wall (deep maroon with pillars)
+  const wallGrad = ctx.createLinearGradient(0, 0, 0, 80);
+  wallGrad.addColorStop(0, '#3a1418');
+  wallGrad.addColorStop(1, '#5a242a');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, 0, W, 80);
+
+  // Floor (red carpet runner on dark stone)
+  ctx.fillStyle = '#1a1a1f';
+  ctx.fillRect(0, 80, W, H - 80);
+  ctx.fillStyle = '#7a1a1a';
+  ctx.fillRect(60, 200, W - 120, 140);
+  ctx.fillStyle = '#aa2424';
+  ctx.fillRect(60, 200, W - 120, 4);
+  ctx.fillStyle = '#5a0a0a';
+  ctx.fillRect(60, 336, W - 120, 4);
+  // Carpet pattern
+  ctx.fillStyle = '#9a1818';
+  for (let x = 80; x < W - 80; x += 50) {
+    ctx.fillRect(x, 260, 30, 2);
+    ctx.fillRect(x + 5, 264, 20, 2);
+  }
+
+  // Pillars along the back wall
+  for (let i = 0; i < 5; i++) {
+    const px = 60 + i * 130;
+    ctx.fillStyle = '#222';
+    ctx.fillRect(px, 0, 12, 80);
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(px + 2, 0, 1, 80);
+    ctx.fillRect(px + 9, 0, 1, 80);
+    // Pillar capital
+    ctx.fillStyle = '#888';
+    ctx.fillRect(px - 2, 0, 16, 4);
+    ctx.fillRect(px - 2, 76, 16, 4);
+  }
+
+  // Wall/floor seam
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 78, W, 4);
+
+  // Title sign
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(W/2 - 80, 8, 160, 22);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 14px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏆 TROPHY ROOM 🏆', W/2, 19);
+
+  // Hatchery door (right side)
+  drawHatcheryDoor(ctx, wh.hatcheryDoor);
+
+  // Trophy pedestals — sort items by rarity (best first), put them on pedestals in 2 rows
+  const order = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
+  const inv = [...state.inventory].sort((a, b) => order[a.rarity] - order[b.rarity]);
+  // Two rows: back row (closer to wall) gets the rarest, front row gets next tier
+  const backRowY = 200;
+  const frontRowY = 320;
+  const slots = 7; // pedestals per row
+  const backItems = inv.slice(0, slots);
+  const frontItems = inv.slice(slots, slots * 2);
+
+  // Z-sort everything on the floor by Y
+  const drawables = [];
+  // Back-row pedestals (Y=200, behind avatar typically)
+  backItems.forEach((item, i) => {
+    drawables.push({
+      y: backRowY,
+      draw: () => drawPedestal(ctx, 90 + i * ((W - 180) / Math.max(1, slots - 1)), backRowY, item, true)
+    });
+  });
+  // Front-row pedestals (Y=320)
+  frontItems.forEach((item, i) => {
+    drawables.push({
+      y: frontRowY,
+      draw: () => drawPedestal(ctx, 90 + i * ((W - 180) / Math.max(1, slots - 1)), frontRowY, item, false)
+    });
+  });
+
+  // Avatar
+  const ap = wh.trophyAvatarPos;
+  drawables.push({
+    y: ap.y,
+    draw: () => {
+      // shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(ap.x, ap.y + 30, 18, 5, 0, 0, Math.PI*2);
+      ctx.fill();
+      drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+    }
+  });
+  // Pet
+  if (state.equipped.pet) {
+    drawables.push({
+      y: wh.petPos.y,
+      draw: () => {
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(wh.petPos.x, wh.petPos.y + 18, 14, 4, 0, 0, Math.PI*2);
+        ctx.fill();
+        drawPetSprite(ctx, wh.petPos.x, wh.petPos.y, state.equipped.pet, 1.4);
+      }
+    });
+  }
+
+  drawables.sort((a, b) => a.y - b.y);
+  drawables.forEach(d => d.draw());
+
+  // Door prompt
+  if (wh.nearHatcheryDoor) {
+    drawDoorPrompt(ctx, wh.hatcheryDoor.x + wh.hatcheryDoor.w/2, wh.hatcheryDoor.y - 36);
+  }
+
+  // Empty state
+  if (state.inventory.length === 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(W/2 - 180, H/2 - 40, 360, 80);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No trophies yet!', W/2, H/2 - 12);
+    ctx.fillStyle = '#aaa';
+    ctx.font = '11px Courier New';
+    ctx.fillText('Hatch some eggs to fill these pedestals.', W/2, H/2 + 12);
+  }
+}
+
+function drawPedestal(ctx, x, y, item, isBack) {
+  // Shadow under pedestal
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 28, 20, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Pedestal base (3-tier)
+  ctx.fillStyle = '#888';
+  ctx.fillRect(x - 18, y + 22, 36, 6);
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(x - 14, y + 4, 28, 22);
+  ctx.fillStyle = '#ddd';
+  ctx.fillRect(x - 12, y, 24, 6);
+  // Pedestal shadowing
+  ctx.fillStyle = '#666';
+  ctx.fillRect(x - 14, y + 24, 28, 2);
+  ctx.fillStyle = '#bbb';
+  ctx.fillRect(x - 14, y + 4, 1, 22);
+  // Rarity glow under item
+  if (['rare','epic','legendary','mythic'].includes(item.rarity)) {
+    const glowColor = rarityColor(item.rarity);
+    ctx.fillStyle = glowColor + '55';
+    ctx.beginPath();
+    ctx.arc(x, y - 8, 18, 0, Math.PI*2);
+    ctx.fill();
+    if (item.rarity === 'mythic' || item.rarity === 'legendary') {
+      ctx.fillStyle = glowColor + '33';
+      ctx.beginPath();
+      ctx.arc(x, y - 8, 26, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  // Item emoji
+  ctx.font = '26px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(item.e, x, y - 8);
+  // Item label (smaller text, below pedestal)
+  if (!isBack) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(x - 32, y + 30, 64, 12);
+    ctx.fillStyle = rarityColor(item.rarity);
+    ctx.font = 'bold 8px Courier New';
+    ctx.fillText(item.n.length > 12 ? item.n.slice(0,11)+'…' : item.n, x, y + 36);
+  }
+}
+
+function enterTrophyRoom() {
+  wh.scene = 'trophy';
+  wh.trophyAvatarPos = { x: 540, y: 320 }; // entering from the right (near return door)
+  wh.hatcheryDoor.x = 542; // return door on the RIGHT wall of trophy room
+  wh.petTrail = [];
+  wh.petPos = { x: 540, y: 300 };
+  toast('🏆 Welcome to the Trophy Room!');
+  playSound('click');
+  updateWarehouseStatus();
+}
+
+function enterGarage() {
+  wh.scene = 'garage';
+  wh.garageAvatarPos = { x: 60, y: 320 }; // entering from the left (near return door)
+  wh.hatcheryDoor.x = 8; // return door on the LEFT wall of garage
+  wh.petTrail = [];
+  wh.petPos = { x: 60, y: 300 };
+  toast('🔧 Welcome to the Garage!');
+  playSound('click');
+  updateWarehouseStatus();
+}
+
+function enterHatchery() {
+  const fromScene = wh.scene;
+  wh.scene = 'hatchery';
+  if (fromScene === 'trophy') {
+    state.warehouseAvatarPos = { x: 110, y: 200 }; // arrive near the trophy door
+    wh.petPos = { x: 80, y: 180 };
+  } else if (fromScene === 'garage') {
+    state.warehouseAvatarPos = { x: 490, y: 200 }; // arrive near the garage door
+    wh.petPos = { x: 510, y: 180 };
+  } else {
+    state.warehouseAvatarPos = { x: 300, y: 250 };
+  }
+  wh.petTrail = [];
+  toast('🏠 Back in The Hatchery.');
+  playSound('click');
+  updateWarehouseStatus();
+}
+
+function drawGarageDoor(ctx, d) {
+  // Industrial garage door (rolled up door) with metal panels
+  ctx.fillStyle = '#222';
+  ctx.fillRect(d.x - 4, d.y - 6, d.w + 8, d.h + 6);
+  // Door body
+  ctx.fillStyle = '#888';
+  ctx.fillRect(d.x, d.y, d.w, d.h);
+  // Horizontal panel lines (rolled garage door)
+  ctx.fillStyle = '#555';
+  for (let i = 0; i < d.h; i += 8) {
+    ctx.fillRect(d.x, d.y + i, d.w, 1);
+  }
+  // Side rails
+  ctx.fillStyle = '#444';
+  ctx.fillRect(d.x, d.y, 2, d.h);
+  ctx.fillRect(d.x + d.w - 2, d.y, 2, d.h);
+  // Handle
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(d.x + d.w/2 - 5, d.y + d.h - 8, 10, 2);
+  // Sign
+  ctx.fillStyle = '#2c1810';
+  ctx.fillRect(d.x - 8, d.y - 18, d.w + 16, 14);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🔧 GARAGE', d.x + d.w/2, d.y - 11);
+  if (wh.nearGarageDoor) {
+    ctx.fillStyle = 'rgba(255,215,0,0.18)';
+    ctx.fillRect(d.x - 8, d.y - 22, d.w + 16, d.h + 26);
+  }
+}
+
+function drawGarage(ctx, W, H) {
+  // Background — concrete walls and floor
+  // Top wall (corrugated metal feel)
+  ctx.fillStyle = '#3a3a44';
+  ctx.fillRect(0, 0, W, 80);
+  ctx.fillStyle = '#2a2a32';
+  for (let x = 0; x < W; x += 24) {
+    ctx.fillRect(x, 0, 1, 80);
+  }
+  // Floor (concrete)
+  ctx.fillStyle = '#4a4a52';
+  ctx.fillRect(0, 80, W, H - 80);
+  // Floor speckle
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  for (let i = 0; i < 200; i++) {
+    const fx = (i * 73) % W;
+    const fy = 80 + ((i * 41) % (H - 80));
+    ctx.fillRect(fx, fy, 2, 1);
+  }
+  // Yellow parking lines
+  ctx.fillStyle = '#f1c40f';
+  for (let x = 80; x < W - 40; x += 130) {
+    ctx.fillRect(x, 90, 4, H - 100);
+  }
+  // Floor "GARAGE" mark
+  ctx.fillStyle = 'rgba(241,196,15,0.4)';
+  ctx.font = 'bold 18px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('GARAGE BAY', W/2, H - 30);
+
+  // Wall/floor seam
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 78, W, 4);
+
+  // Title sign
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(W/2 - 80, 8, 160, 22);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 14px Courier New';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🔧 THE GARAGE 🔧', W/2, 19);
+
+  // Hatchery return door (left side)
+  drawHatcheryDoor(ctx, wh.hatcheryDoor);
+
+  // Tools & decor on the back wall area (sides)
+  // Toolbox
+  ctx.fillStyle = '#c0392b';
+  ctx.fillRect(80, 120, 28, 18);
+  ctx.fillStyle = '#962818';
+  ctx.fillRect(80, 130, 28, 8);
+  ctx.fillStyle = '#888';
+  ctx.fillRect(90, 124, 8, 2);
+  // Tire stack (right side)
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(W - 70, 120 + i * 8, 30, 7);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(W - 65, 122 + i * 8, 20, 3);
+  }
+  // Oil drums
+  ctx.fillStyle = '#666';
+  ctx.fillRect(150, 110, 16, 28);
+  ctx.fillStyle = '#444';
+  ctx.fillRect(150, 110, 16, 4);
+  ctx.fillStyle = '#c0392b';
+  ctx.fillRect(151, 116, 14, 4);
+
+  // Filter inventory for vehicles, sort by rarity
+  const order = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
+  const vehicles = state.inventory.filter(i => i.t === 'vehicle').sort((a, b) => order[a.rarity] - order[b.rarity]);
+
+  // Two rows: lifts (back, raised) and floor parking (front)
+  const liftY = 200;
+  const floorY = 320;
+  const slotsPerRow = 4;
+  const liftItems = vehicles.slice(0, slotsPerRow);
+  const floorItems = vehicles.slice(slotsPerRow, slotsPerRow * 2);
+
+  const drawables = [];
+  liftItems.forEach((item, i) => {
+    drawables.push({
+      y: liftY,
+      draw: () => drawLift(ctx, 100 + i * ((W - 200) / Math.max(1, slotsPerRow - 1)), liftY, item)
+    });
+  });
+  floorItems.forEach((item, i) => {
+    drawables.push({
+      y: floorY,
+      draw: () => drawParkedVehicle(ctx, 110 + i * ((W - 220) / Math.max(1, slotsPerRow - 1)), floorY, item)
+    });
+  });
+
+  // Avatar
+  const ap = wh.garageAvatarPos;
+  drawables.push({
+    y: ap.y,
+    draw: () => {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(ap.x, ap.y + 30, 18, 5, 0, 0, Math.PI*2);
+      ctx.fill();
+      drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+    }
+  });
+  // Pet
+  if (state.equipped.pet) {
+    drawables.push({
+      y: wh.petPos.y,
+      draw: () => {
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(wh.petPos.x, wh.petPos.y + 18, 14, 4, 0, 0, Math.PI*2);
+        ctx.fill();
+        drawPetSprite(ctx, wh.petPos.x, wh.petPos.y, state.equipped.pet, 1.4);
+      }
+    });
+  }
+
+  drawables.sort((a, b) => a.y - b.y);
+  drawables.forEach(d => d.draw());
+
+  // Door prompt
+  if (wh.nearHatcheryDoor) {
+    drawDoorPrompt(ctx, wh.hatcheryDoor.x + wh.hatcheryDoor.w/2, wh.hatcheryDoor.y - 36);
+  }
+
+  // Empty state
+  if (vehicles.length === 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(W/2 - 200, H/2 - 50, 400, 90);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No vehicles yet!', W/2, H/2 - 16);
+    ctx.fillStyle = '#aaa';
+    ctx.font = '11px Courier New';
+    ctx.fillText('Hatch big & huge eggs to find', W/2, H/2 + 4);
+    ctx.fillText('bicycles, cars, helicopters, UFOs, rockets...', W/2, H/2 + 20);
+  }
+}
+
+function drawLift(ctx, x, y, item) {
+  // Hydraulic lift base + column
+  ctx.fillStyle = '#444';
+  ctx.fillRect(x - 22, y + 24, 44, 8);  // base
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x - 22, y + 30, 44, 2);
+  // Column
+  ctx.fillStyle = '#666';
+  ctx.fillRect(x - 4, y + 4, 8, 20);
+  ctx.fillStyle = '#888';
+  ctx.fillRect(x - 4, y + 4, 1, 20);
+  // Lift platform
+  ctx.fillStyle = '#888';
+  ctx.fillRect(x - 28, y - 2, 56, 8);
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(x - 28, y - 2, 56, 1);
+  ctx.fillStyle = '#444';
+  ctx.fillRect(x - 28, y + 5, 56, 1);
+  // Rarity glow under vehicle
+  if (['rare','epic','legendary','mythic'].includes(item.rarity)) {
+    const c = rarityColor(item.rarity);
+    ctx.fillStyle = c + '44';
+    ctx.beginPath();
+    ctx.arc(x, y - 16, 26, 0, Math.PI*2);
+    ctx.fill();
+  }
+  // Vehicle (emoji)
+  ctx.font = '34px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(item.e, x, y - 12);
+  // Label
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(x - 38, y + 32, 76, 12);
+  ctx.fillStyle = rarityColor(item.rarity);
+  ctx.font = 'bold 8px Courier New';
+  ctx.fillText(item.n.length > 14 ? item.n.slice(0,13)+'…' : item.n, x, y + 38);
+}
+
+function drawColosseumDoor(ctx, d) {
+  // Stone arched door (gladiator entrance)
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(d.x - 4, d.y - 8, d.w + 8, d.h + 8);
+  // Stone arch
+  ctx.fillStyle = '#7a7a82';
+  ctx.fillRect(d.x, d.y, d.w, d.h);
+  // Stone block pattern
+  ctx.fillStyle = '#5a5a62';
+  for (let i = 0; i < d.h; i += 10) {
+    for (let j = 0; j < d.w; j += 12) {
+      ctx.fillRect(d.x + j, d.y + i, 1, 10);
+      ctx.fillRect(d.x + j, d.y + i, 12, 1);
+    }
+  }
+  // Crossed swords above
+  ctx.font = '14px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚔️', d.x + d.w/2, d.y + d.h/2);
+  // Sign
+  ctx.fillStyle = '#2c1810';
+  ctx.fillRect(d.x - 12, d.y - 18, d.w + 24, 14);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 9px Courier New';
+  ctx.fillText('⚔️ COLOSSEUM', d.x + d.w/2, d.y - 11);
+  if (wh.nearColosseumDoor) {
+    ctx.fillStyle = 'rgba(255,215,0,0.18)';
+    ctx.fillRect(d.x - 12, d.y - 22, d.w + 24, d.h + 26);
+  }
+}
+
+function drawColosseum(ctx, W, H) {
+  // Sky / arena top — stone amphitheatre
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, 80);
+  skyGrad.addColorStop(0, '#3a2818');
+  skyGrad.addColorStop(1, '#5a3a20');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, 80);
+  // Stone columns/arches in background
+  for (let i = 0; i < 6; i++) {
+    const cx = 50 + i * 100;
+    ctx.fillStyle = '#3a3025';
+    ctx.fillRect(cx, 10, 24, 70);
+    ctx.fillStyle = '#5a4a35';
+    ctx.fillRect(cx + 2, 14, 20, 60);
+    // Arch top
+    ctx.fillStyle = '#3a3025';
+    ctx.fillRect(cx + 2, 10, 20, 4);
+  }
+
+  // Sand floor
+  ctx.fillStyle = '#d4a060';
+  ctx.fillRect(0, 80, W, H - 80);
+  // Sand texture
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  for (let i = 0; i < 200; i++) {
+    const fx = (i * 73) % W;
+    const fy = 80 + ((i * 41) % (H - 80));
+    ctx.fillRect(fx, fy, 2, 1);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  for (let i = 0; i < 80; i++) {
+    const fx = (i * 113) % W;
+    const fy = 80 + ((i * 29) % (H - 80));
+    ctx.fillRect(fx, fy, 1, 1);
+  }
+  // Floor seam
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 78, W, 4);
+
+  // Title sign
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(W/2 - 90, 8, 180, 22);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 14px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚔️ THE COLOSSEUM ⚔️', W/2, 19);
+
+  // Hatchery return door (right)
+  drawHatcheryDoor(ctx, wh.hatcheryDoor);
+
+  // Two pedestals: left (player) and right (Sword Steve)
+  drawPedestalCombat(ctx, wh.leftPedestal, wh.nearLeftPedestal, 'YOU');
+  drawPedestalCombat(ctx, wh.rightPedestal, false, 'STEVE');
+
+  // Sword Steve always stands on right pedestal
+  const drawables = [];
+  const stevePos = { x: wh.rightPedestal.x + wh.rightPedestal.w/2, y: wh.rightPedestal.y - 4 };
+  drawables.push({
+    y: stevePos.y,
+    draw: () => {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(stevePos.x, stevePos.y + 30, 18, 5, 0, 0, Math.PI*2);
+      ctx.fill();
+      drawChibi(ctx, stevePos.x, stevePos.y + 32, 2, SWORD_STEVE.avatar, {});
+      // Steve's name above his head
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(stevePos.x - 38, stevePos.y - 90, 76, 14);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Sword Steve', stevePos.x, stevePos.y - 83);
+    }
+  });
+
+  // Player avatar
+  const ap = wh.colosseumAvatarPos;
+  drawables.push({
+    y: ap.y,
+    draw: () => {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(ap.x, ap.y + 30, 18, 5, 0, 0, Math.PI*2);
+      ctx.fill();
+      drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+    }
+  });
+  if (state.equipped.pet) {
+    drawables.push({
+      y: wh.petPos.y,
+      draw: () => {
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(wh.petPos.x, wh.petPos.y + 18, 14, 4, 0, 0, Math.PI*2);
+        ctx.fill();
+        drawPetSprite(ctx, wh.petPos.x, wh.petPos.y, state.equipped.pet, 1.4);
+      }
+    });
+  }
+  drawables.sort((a, b) => a.y - b.y);
+  drawables.forEach(d => d.draw());
+
+  // Door prompt
+  if (wh.nearHatcheryDoor) {
+    drawDoorPrompt(ctx, wh.hatcheryDoor.x + wh.hatcheryDoor.w/2, wh.hatcheryDoor.y - 36);
+  }
+  // Pedestal prompt
+  if (wh.nearLeftPedestal) {
+    drawDoorPrompt(ctx, wh.leftPedestal.x + wh.leftPedestal.w/2, wh.leftPedestal.y - 50);
+  }
+
+  // Info banner
+  const playerWeapons = state.inventory.filter(i => i.t === 'weapon');
+  if (playerWeapons.length < 3) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(W/2 - 200, 100, 400, 24);
+    ctx.fillStyle = '#ffaaaa';
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`You need at least 3 weapons to compete (you have ${playerWeapons.length})`, W/2, 112);
+  }
+}
+
+function drawPedestalCombat(ctx, p, near, label) {
+  // Pedestal base
+  ctx.fillStyle = '#5a4a35';
+  ctx.fillRect(p.x - 4, p.y + p.h - 4, p.w + 8, 6);
+  // Pedestal top
+  ctx.fillStyle = '#8a7a55';
+  ctx.fillRect(p.x, p.y, p.w, p.h);
+  // Pedestal lighter top edge
+  ctx.fillStyle = '#a89570';
+  ctx.fillRect(p.x, p.y, p.w, 2);
+  // Side shading
+  ctx.fillStyle = '#5a4a35';
+  ctx.fillRect(p.x + p.w - 2, p.y, 2, p.h);
+  // Pattern
+  ctx.fillStyle = '#5a4a35';
+  for (let i = 8; i < p.w - 4; i += 12) {
+    ctx.fillRect(p.x + i, p.y + 8, 4, 4);
+  }
+  // Label
+  ctx.fillStyle = '#2c1810';
+  ctx.fillRect(p.x + p.w/2 - 22, p.y + p.h + 4, 44, 12);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 8px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, p.x + p.w/2, p.y + p.h + 10);
+  // Glow if near
+  if (near) {
+    ctx.fillStyle = 'rgba(255,215,0,0.18)';
+    ctx.fillRect(p.x - 8, p.y - 8, p.w + 16, p.h + 16);
+  }
+}
+
+function enterColosseum() {
+  wh.scene = 'colosseum';
+  wh.colosseumAvatarPos = { x: 100, y: 320 };
+  wh.hatcheryDoor.x = 542; // return door on right
+  wh.petTrail = [];
+  wh.petPos = { x: 80, y: 300 };
+  toast('⚔️ Welcome to the Colosseum!');
+  playSound('click');
+}
+
+// ============================================================
+// COLOSSEUM MATCH (vs Sword Steve practice)
+// ============================================================
+function startColosseumMatch() {
+  if (colosseumMatch) return; // already in match
+  const playerWeapons = state.inventory.filter(i => i.t === 'weapon');
+  if (playerWeapons.length < 3) {
+    toast(`Need 3+ weapons to compete. You have ${playerWeapons.length}.`);
+    return;
+  }
+  colosseumMatch = {
+    phase: 'countdown',
+    countdownEnd: Date.now() + 3000,
+    selectEnd: 0,
+    wagerCap: 999, // practice mode — no effective cap (real friend wagers will use rarity caps)
+    wagerRarity: 'practice',
+    playerWeapons: [],
+    botWeapons: [],
+    currentRound: 0,        // 0, 1, 2
+    playerRoundPicks: [],   // weapon used per round
+    botRoundPicks: [],      // weapon used per round
+    roundWinners: [],       // 'player' | 'bot' per round
+    pendingPlayerPick: null
+  };
+  document.getElementById('colosseumModal').classList.add('show');
+  playSound('click');
+  renderColosseumPhase();
+}
+
+function endColosseumMatch() {
+  colosseumMatch = null;
+  document.getElementById('colosseumModal').classList.remove('show');
+}
+
+function renderColosseumPhase() {
+  if (!colosseumMatch) return;
+  const m = colosseumMatch;
+  const el = document.getElementById('colosseumPhase');
+
+  if (m.phase === 'countdown') {
+    const remaining = Math.max(0, Math.ceil((m.countdownEnd - Date.now()) / 1000));
+    el.innerHTML = `
+      <h2>⚔️ vs Sword Steve ⚔️</h2>
+      <p style="color:var(--text-dim); margin: 10px 0;">Practice match — no items wagered</p>
+      <div style="font-size:5em; color:var(--gold); margin: 20px; text-shadow: 3px 3px 0 #000;">${remaining}</div>
+      <p style="color:var(--gold-soft);">Practice mode — no power cap · 60 seconds to choose 3 weapons</p>
+      <button class="secondary" onclick="endColosseumMatch()" style="margin-top:14px;">Forfeit</button>
+    `;
+    if (remaining <= 0) {
+      m.phase = 'select';
+      m.selectEnd = Date.now() + 60000;
+      playSound('achievement');
+    }
+    setTimeout(renderColosseumPhase, 200);
+  }
+  else if (m.phase === 'select') {
+    const remaining = Math.max(0, Math.ceil((m.selectEnd - Date.now()) / 1000));
+    const allWeapons = state.inventory.filter(i => i.t === 'weapon');
+    const totalPower = m.playerWeapons.reduce((acc, w) => acc + (w.power || 0), 0);
+    const canConfirm = m.playerWeapons.length === 3 && totalPower <= m.wagerCap;
+    el.innerHTML = `
+      <h2>Pick 3 Weapons</h2>
+      <div style="display:flex; justify-content:space-between; margin: 8px 0; font-size: 0.9em; flex-wrap:wrap; gap:8px;">
+        <span>⏱️ <strong>${remaining}</strong>s</span>
+        <span>⚔️ Total Power: <strong style="color:var(--gold);">${totalPower}</strong></span>
+        <span>Selected: <strong>${m.playerWeapons.length}/3</strong></span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:8px; margin: 12px 0;">
+        ${allWeapons.map((w, i) => {
+          const isSelected = m.playerWeapons.some(pw => pw === w);
+          const overCap = !isSelected && (totalPower + (w.power || 0) > m.wagerCap);
+          return `
+            <div class="item-card ${w.rarity}" style="cursor:pointer; ${isSelected ? 'border-color:var(--gold); transform:translateY(-2px); box-shadow:0 0 10px var(--gold);' : ''} ${overCap && !isSelected ? 'opacity:0.4;' : ''}" onclick="toggleColosseumWeapon(${i})">
+              <div class="item-emoji">${w.e}</div>
+              <div class="item-name">${escapeHtml(w.n)}</div>
+              <div class="item-rarity ${w.rarity}">${w.rarity}</div>
+              <div style="color:var(--gold); font-size:0.85em; margin-top:2px;">⚔️ ${w.power || 0}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div style="position: sticky; bottom: -24px; background: linear-gradient(to top, var(--bg-3) 70%, rgba(15,52,96,0)); padding: 14px 0 4px; margin: 0 -24px -24px; padding-left: 24px; padding-right: 24px;">
+        <button onclick="confirmColosseumPicks()" ${canConfirm ? '' : 'disabled style="opacity:0.5;"'}>Confirm Selection</button>
+        <button class="secondary" onclick="endColosseumMatch()" style="margin-left:8px;">Forfeit</button>
+      </div>
+    `;
+    if (remaining <= 0) {
+      // Time's up — auto-fill if needed
+      if (m.playerWeapons.length < 3) {
+        const remaining_ws = allWeapons.filter(w => !m.playerWeapons.includes(w))
+          .sort((a, b) => (a.power || 0) - (b.power || 0)); // pick weakest available
+        while (m.playerWeapons.length < 3 && remaining_ws.length > 0) {
+          const next = remaining_ws.shift();
+          if (m.playerWeapons.reduce((acc,w) => acc + (w.power||0), 0) + (next.power||0) <= m.wagerCap) {
+            m.playerWeapons.push(next);
+          }
+        }
+      }
+      confirmColosseumPicks();
+      return;
+    }
+    setTimeout(renderColosseumPhase, 300);
+  }
+  else if (m.phase === 'roundpick') {
+    // Player picks which weapon to use this round
+    const round = m.currentRound;
+    const remaining = m.playerWeapons.filter(w => !m.playerRoundPicks.includes(w));
+    if (remaining.length === 0) {
+      // shouldn't happen
+      m.phase = 'final';
+      renderColosseumPhase();
+      return;
+    }
+    if (remaining.length === 1) {
+      // Last weapon — auto-use it
+      m.playerRoundPicks.push(remaining[0]);
+      pickBotWeapon(round);
+      resolveRound(round);
+      m.phase = 'reveal';
+      m.revealStarted = Date.now();
+      renderColosseumPhase();
+      return;
+    }
+    const playerScore = m.roundWinners.filter(w=>w==='player').length;
+    const botScore = m.roundWinners.filter(w=>w==='bot').length;
+    el.innerHTML = `
+      <h2>Round ${round + 1} of 3 — Pick Your Weapon</h2>
+      <p style="color:var(--text-dim);">Score: You <strong style="color:var(--green);">${playerScore}</strong> – <strong style="color:var(--red);">${botScore}</strong> Steve</p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; margin: 14px 0;">
+        ${remaining.map((w) => {
+          const idx = m.playerWeapons.indexOf(w);
+          return `
+          <div class="item-card ${w.rarity}" style="cursor:pointer;" onclick="pickRoundWeapon(${idx})">
+            <div class="item-emoji">${w.e}</div>
+            <div class="item-name">${escapeHtml(w.n)}</div>
+            <div class="item-rarity ${w.rarity}">${w.rarity}</div>
+            <div style="color:var(--gold); font-size:0.85em;">⚔️ ${w.power || 0}</div>
+          </div>
+        `;
+        }).join('')}
+      </div>
+    `;
+  }
+  else if (m.phase === 'reveal') {
+    const round = m.currentRound;
+    const playerPick = m.playerRoundPicks[round];
+    const botPick = m.botRoundPicks[round];
+    const winner = m.roundWinners[round];
+    const lossAnim = m.lossAnim || 'shatters';
+    const elapsed = Date.now() - (m.revealStarted || Date.now());
+
+    el.innerHTML = `
+      <h2>Round ${round + 1}</h2>
+      <div style="display:flex; justify-content:space-around; align-items:center; margin: 30px 0; gap: 20px;">
+        <div style="text-align:center; ${elapsed > 1800 && winner !== 'player' ? 'opacity: 0.4;' : ''}">
+          <div style="font-size:0.85em; color:var(--text-dim);">YOU</div>
+          <div style="font-size:5em; ${elapsed > 1500 && winner === 'bot' ? 'animation: clashLose 0.8s forwards;' : ''}">${playerPick.e}</div>
+          <div style="color:var(--gold);">⚔️ ${playerPick.power}</div>
+          <div style="font-size:0.8em;">${escapeHtml(playerPick.n)}</div>
+        </div>
+        <div style="font-size:3em; color:var(--gold); animation: clashHit 0.8s;">⚡</div>
+        <div style="text-align:center; ${elapsed > 1800 && winner !== 'bot' ? 'opacity: 0.4;' : ''}">
+          <div style="font-size:0.85em; color:var(--text-dim);">STEVE</div>
+          <div style="font-size:5em; ${elapsed > 1500 && winner === 'player' ? 'animation: clashLose 0.8s forwards;' : ''}">${botPick.e}</div>
+          <div style="color:var(--gold);">⚔️ ${botPick.power}</div>
+          <div style="font-size:0.8em;">${escapeHtml(botPick.n)}</div>
+        </div>
+      </div>
+      <div style="font-size: 1.2em; color:var(--gold); min-height: 30px;">
+        ${elapsed > 1800 ? `${winner === 'player' ? `🏆 You win the round! Steve's ${botPick.e} ${lossAnim}.` : `💀 Steve wins! Your ${playerPick.e} ${lossAnim}.`}` : 'Clash!'}
+      </div>
+      <button onclick="advanceColosseumRound()" style="margin-top:14px; visibility: ${elapsed > 2500 ? 'visible' : 'hidden'};">Continue</button>
+    `;
+    if (elapsed < 2700) {
+      setTimeout(renderColosseumPhase, 250);
+    }
+  }
+  else if (m.phase === 'final') {
+    const playerWins = m.roundWinners.filter(w => w === 'player').length;
+    const won = playerWins >= 2;
+    el.innerHTML = `
+      <h2>${won ? '🏆 VICTORY! 🏆' : '💀 Defeat 💀'}</h2>
+      <p style="color:var(--text-dim); margin: 10px 0;">Final score: You <strong style="color:${won?'var(--green)':'var(--red)'};">${playerWins}</strong> – ${3 - playerWins} Steve</p>
+      <div style="display:flex; justify-content:center; gap: 20px; margin: 16px 0;">
+        ${m.roundWinners.map((w, i) => `<div style="font-size:2em;">${w === 'player' ? '✅' : '❌'}</div>`).join('')}
+      </div>
+      <p style="color:var(--text-dim); font-size:0.9em;">Practice mode — no items lost or won. Real wagering will be available when friend matches launch.</p>
+      <button onclick="endColosseumMatch()" style="margin-top:14px;">Done</button>
+    `;
+    if (won && !m.celebrated) {
+      m.celebrated = true;
+      playSound('levelup');
+      addXP(50);
+      if (state.settings.fx) burstConfetti('legendary');
+      checkAchievement('colosseum_win');
+      if (playerWins === 3) checkAchievement('colosseum_sweep');
+      // Steve drops Excalibur
+      const excalibur = {
+        e: '🗡️',
+        n: 'Excalibur',
+        d: "Steve's legendary blade — won by victory",
+        t: 'weapon',
+        power: 55,
+        rarity: 'legendary',
+        id: Date.now() + Math.random()
+      };
+      state.inventory.push(excalibur);
+      setTimeout(() => toast('🗡️ Steve dropped Excalibur! Added to inventory.', 'achievement'), 600);
+      checkCollectionAchievements();
+      save();
+      renderStats();
+    }
+  }
+}
+
+function toggleColosseumWeapon(idx) {
+  const m = colosseumMatch;
+  if (!m || m.phase !== 'select') return;
+  const allWeapons = state.inventory.filter(i => i.t === 'weapon');
+  const w = allWeapons[idx];
+  if (!w) return;
+  const isSelected = m.playerWeapons.includes(w);
+  if (isSelected) {
+    m.playerWeapons = m.playerWeapons.filter(x => x !== w);
+  } else {
+    if (m.playerWeapons.length >= 3) { toast('Already picked 3 — deselect one first.'); return; }
+    const newTotal = m.playerWeapons.reduce((a, x) => a + (x.power||0), 0) + (w.power || 0);
+    if (newTotal > m.wagerCap) { toast(`That would exceed the ${m.wagerCap} cap.`); return; }
+    m.playerWeapons.push(w);
+  }
+  playSound('click');
+  renderColosseumPhase();
+}
+
+function confirmColosseumPicks() {
+  const m = colosseumMatch;
+  if (!m || m.phase !== 'select') return;
+  if (m.playerWeapons.length !== 3) { toast('Pick exactly 3 weapons.'); return; }
+  // Bot picks 3 weapons under cap
+  m.botWeapons = pickSteveWeapons(m.wagerCap);
+  m.phase = 'roundpick';
+  m.currentRound = 0;
+  renderColosseumPhase();
+}
+
+function pickSteveWeapons(cap) {
+  // Steve picks 3 weapons from his arsenal that fit under cap.
+  // Strategy: fill with strongest weapons that fit.
+  const arsenal = [...SWORD_STEVE.arsenal].sort((a,b) => (b.power||0) - (a.power||0));
+  const picks = [];
+  let total = 0;
+  // Try to maximize power without exceeding cap
+  for (const w of arsenal) {
+    if (picks.length >= 3) break;
+    if (total + (w.power || 0) <= cap) {
+      picks.push(w);
+      total += (w.power || 0);
+    }
+  }
+  // If not enough, fill with weakest
+  if (picks.length < 3) {
+    const weakest = [...SWORD_STEVE.arsenal].sort((a,b) => (a.power||0) - (b.power||0));
+    for (const w of weakest) {
+      if (picks.length >= 3) break;
+      if (!picks.includes(w)) picks.push(w);
+    }
+  }
+  return picks.slice(0, 3);
+}
+
+function pickRoundWeapon(playerWeaponIdx) {
+  const m = colosseumMatch;
+  if (!m || m.phase !== 'roundpick') return;
+  const w = m.playerWeapons[playerWeaponIdx];
+  if (!w || m.playerRoundPicks.includes(w)) return;
+  m.playerRoundPicks.push(w);
+  pickBotWeapon(m.currentRound);
+  resolveRound(m.currentRound);
+  m.phase = 'reveal';
+  m.revealStarted = Date.now();
+  playSound('hatch');
+  renderColosseumPhase();
+}
+
+function resolveRound(round) {
+  const m = colosseumMatch;
+  const playerPick = m.playerRoundPicks[round];
+  const botPick = m.botRoundPicks[round];
+  let winner;
+  if ((playerPick.power || 0) > (botPick.power || 0)) winner = 'player';
+  else if ((playerPick.power || 0) < (botPick.power || 0)) winner = 'bot';
+  else winner = Math.random() < 0.5 ? 'player' : 'bot';
+  m.roundWinners.push(winner);
+  const animations = ['shatters', 'crumbles to dust', 'bursts into flames', 'dissolves into mist', 'snaps in two'];
+  m.lossAnim = animations[Math.floor(Math.random() * animations.length)];
+  if (winner === 'player' && state.settings.fx) {
+    setTimeout(() => burstConfetti(), 1800);
+  }
+}
+
+function pickBotWeapon(round) {
+  const m = colosseumMatch;
+  // Bot strategy: pick a random weapon from remaining (not used in earlier rounds)
+  const remaining = m.botWeapons.filter(w => !m.botRoundPicks.includes(w));
+  // For round 3, only one left
+  // For earlier rounds, pick randomly
+  const pick = remaining[Math.floor(Math.random() * remaining.length)];
+  m.botRoundPicks.push(pick);
+}
+
+function advanceColosseumRound() {
+  const m = colosseumMatch;
+  if (!m) return;
+  m.currentRound++;
+  m.revealStarted = null;
+  m.lossAnim = null;
+  if (m.currentRound >= 3) {
+    m.phase = 'final';
+  } else {
+    m.phase = 'roundpick';
+  }
+  renderColosseumPhase();
+}
+
+function drawParkedVehicle(ctx, x, y, item) {
+  // Floor parking pad
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 18, 28, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Rarity glow
+  if (['rare','epic','legendary','mythic'].includes(item.rarity)) {
+    const c = rarityColor(item.rarity);
+    ctx.fillStyle = c + '44';
+    ctx.beginPath();
+    ctx.arc(x, y, 24, 0, Math.PI*2);
+    ctx.fill();
+  }
+  // Vehicle
+  ctx.font = '32px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(item.e, x, y);
+  // Label
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(x - 38, y + 22, 76, 12);
+  ctx.fillStyle = rarityColor(item.rarity);
+  ctx.font = 'bold 8px Courier New';
+  ctx.fillText(item.n.length > 14 ? item.n.slice(0,13)+'…' : item.n, x, y + 28);
+}
+
+// ============================================================
+// MARKETPLACE
+// ============================================================
+function openMarketplace() {
+  refreshMarketplaceCounts();
+  document.getElementById('marketplaceModal').classList.add('show');
+  playSound('click');
+}
+function closeMarketplace() {
+  document.getElementById('marketplaceModal').classList.remove('show');
+}
+function refreshMarketplaceCounts() {
+  document.getElementById('ms-small-count').textContent = state.smallEggs;
+  document.getElementById('ms-big-count').textContent = state.bigEggs;
+  document.getElementById('ms-huge-count').textContent = state.hugeEggs;
+  renderDuplicatesList();
+}
+
+const DUPE_VALUES = {
+  common:    { small: 1, big: 0, huge: 0 },
+  uncommon:  { small: 3, big: 0, huge: 0 },
+  rare:      { small: 0, big: 1, huge: 0 },
+  epic:      { small: 0, big: 2, huge: 0 },
+  legendary: { small: 0, big: 0, huge: 1 },
+  mythic:    { small: 0, big: 0, huge: 2 }
+};
+
+function getDuplicateGroups() {
+  // Group inventory items by name, return groups with 2+ copies
+  const groups = {};
+  state.inventory.forEach(item => {
+    if (!groups[item.n]) groups[item.n] = { name: item.n, e: item.e, t: item.t, rarity: item.rarity, items: [] };
+    groups[item.n].items.push(item);
+  });
+  // Sort by rarity (rarest first), then name
+  const order = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
+  return Object.values(groups)
+    .filter(g => g.items.length >= 2)
+    .sort((a, b) => order[a.rarity] - order[b.rarity] || a.name.localeCompare(b.name));
+}
+
+function renderDuplicatesList() {
+  const list = document.getElementById('duplicatesList');
+  if (!list) return;
+  const dupes = getDuplicateGroups();
+  if (dupes.length === 0) {
+    list.innerHTML = '<div style="text-align:center; padding:16px; color:var(--text-dim); font-size:0.9em;">No duplicates yet — keep hatching!</div>';
+    return;
+  }
+  list.innerHTML = dupes.map(g => {
+    const v = DUPE_VALUES[g.rarity] || DUPE_VALUES.common;
+    const valueLabel = [
+      v.small ? `${v.small}🥚` : '',
+      v.big ? `${v.big}🥚🥚` : '',
+      v.huge ? `${v.huge}🥚🥚🥚` : ''
+    ].filter(Boolean).join(' + ');
+    const equippedCount = countEquippedByName(g.name);
+    const tradableCount = g.items.length - 1; // keep at least one
+    return `
+      <div class="dupe-row">
+        <span class="dupe-emoji">${g.e}</span>
+        <div class="dupe-info">
+          <div class="dupe-name"><span class="item-rarity ${g.rarity}">${g.rarity}</span> ${escapeHtml(g.name)}</div>
+          <div class="dupe-meta">You have ${g.items.length}${equippedCount > 0 ? ' ('+equippedCount+' equipped)' : ''} · trade 1 for ${valueLabel}</div>
+        </div>
+        <button class="small success" onclick="tradeInDuplicate(${JSON.stringify(g.name).replace(/"/g, '&quot;')})">Trade 1</button>
+        ${tradableCount >= 2 ? `<button class="small secondary" onclick="tradeAllDuplicates(${JSON.stringify(g.name).replace(/"/g, '&quot;')})">All ${tradableCount}</button>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function countEquippedByName(name) {
+  let count = 0;
+  Object.values(state.equipped).forEach(eq => {
+    if (eq && eq.n === name) count++;
+  });
+  return count;
+}
+
+function tradeInDuplicate(itemName) {
+  const groups = getDuplicateGroups();
+  const g = groups.find(x => x.name === itemName);
+  if (!g) { toast('No duplicate to trade.'); return; }
+  // Pick an item to remove (prefer one that isn't equipped)
+  const equippedIds = Object.values(state.equipped).filter(Boolean).map(e => e.id);
+  let toRemove = g.items.find(i => !equippedIds.includes(i.id));
+  if (!toRemove) toRemove = g.items[0];
+
+  state.inventory = state.inventory.filter(i => i.id !== toRemove.id);
+
+  const v = DUPE_VALUES[g.rarity] || DUPE_VALUES.common;
+  state.smallEggs += v.small;
+  state.bigEggs += v.big;
+  state.hugeEggs += v.huge;
+
+  let parts = [];
+  if (v.small) parts.push(`${v.small} 🥚`);
+  if (v.big) parts.push(`${v.big} 🥚🥚`);
+  if (v.huge) parts.push(`${v.huge} 🥚🥚🥚`);
+  toast(`Traded 1 ${g.name} for ${parts.join(' + ')}!`);
+  playSound('complete');
+  if (state.settings.fx) burstConfetti();
+
+  state.dupeTradeCount = (state.dupeTradeCount || 0) + 1;
+  checkAchievement('first_trade');
+  if (state.dupeTradeCount >= 10) checkAchievement('bulk_trader');
+
+  save();
+  refreshMarketplaceCounts();
+  renderStats();
+  renderEggs();
+  renderInventory();
+}
+
+function tradeAllDuplicates(itemName) {
+  const groups = getDuplicateGroups();
+  const g = groups.find(x => x.name === itemName);
+  if (!g) return;
+  const tradableCount = g.items.length - 1; // keep at least 1
+  if (tradableCount < 1) return;
+  if (!confirm(`Trade in ${tradableCount} extra ${g.name}? You'll keep 1 for yourself.`)) return;
+
+  const equippedIds = Object.values(state.equipped).filter(Boolean).map(e => e.id);
+  // Sort: unequipped first, equipped last (so we keep equipped one)
+  const sortedItems = [...g.items].sort((a, b) => {
+    const aEq = equippedIds.includes(a.id) ? 1 : 0;
+    const bEq = equippedIds.includes(b.id) ? 1 : 0;
+    return aEq - bEq;
+  });
+  // Trade in the first `tradableCount` (unequipped first)
+  const toTrade = sortedItems.slice(0, tradableCount);
+
+  toTrade.forEach(item => {
+    state.inventory = state.inventory.filter(i => i.id !== item.id);
+    const v = DUPE_VALUES[g.rarity] || DUPE_VALUES.common;
+    state.smallEggs += v.small;
+    state.bigEggs += v.big;
+    state.hugeEggs += v.huge;
+  });
+
+  const v = DUPE_VALUES[g.rarity] || DUPE_VALUES.common;
+  const totalSmall = v.small * tradableCount;
+  const totalBig = v.big * tradableCount;
+  const totalHuge = v.huge * tradableCount;
+  let parts = [];
+  if (totalSmall) parts.push(`${totalSmall} 🥚`);
+  if (totalBig) parts.push(`${totalBig} 🥚🥚`);
+  if (totalHuge) parts.push(`${totalHuge} 🥚🥚🥚`);
+  toast(`Traded ${tradableCount} ${g.name} for ${parts.join(' + ')}!`);
+  playSound('reveal');
+  if (state.settings.fx) burstConfetti();
+
+  state.dupeTradeCount = (state.dupeTradeCount || 0) + tradableCount;
+  checkAchievement('first_trade');
+  if (state.dupeTradeCount >= 10) checkAchievement('bulk_trader');
+
+  save();
+  refreshMarketplaceCounts();
+  renderStats();
+  renderEggs();
+  renderInventory();
+}
+function trade(kind) {
+  const qty = Math.max(1, parseInt(document.getElementById('ms-qty-' + kind).value) || 1);
+  if (kind === 's5b1') {
+    const cost = 5 * qty;
+    if (state.smallEggs < cost) { toast(`Need ${cost} small eggs, you have ${state.smallEggs}.`); return; }
+    state.smallEggs -= cost;
+    state.bigEggs += qty;
+    toast(`Traded ${cost} 🥚 for ${qty} 🥚🥚 Big!`);
+  } else if (kind === 'b3h1') {
+    const cost = 3 * qty;
+    if (state.bigEggs < cost) { toast(`Need ${cost} big eggs, you have ${state.bigEggs}.`); return; }
+    state.bigEggs -= cost;
+    state.hugeEggs += qty;
+    toast(`Traded ${cost} 🥚🥚 for ${qty} 🥚🥚🥚 Huge!`);
+  } else if (kind === 'b1s3') {
+    if (state.bigEggs < qty) { toast(`Need ${qty} big eggs, you have ${state.bigEggs}.`); return; }
+    state.bigEggs -= qty;
+    state.smallEggs += 3 * qty;
+    toast(`Broke ${qty} big into ${3*qty} small.`);
+  } else if (kind === 'h1b2') {
+    if (state.hugeEggs < qty) { toast(`Need ${qty} huge eggs, you have ${state.hugeEggs}.`); return; }
+    state.hugeEggs -= qty;
+    state.bigEggs += 2 * qty;
+    toast(`Broke ${qty} huge into ${2*qty} big.`);
+  }
+  playSound('complete');
+  if (state.settings.fx) burstConfetti();
+  checkAchievement('egg_trader');
+  save();
+  refreshMarketplaceCounts();
+  renderStats();
+  renderEggs();
+}
+
+// ============================================================
+// SOUND (Web Audio API)
+// ============================================================
+let audioCtx = null;
+function getAudio() {
+  if (!state.settings.sound) return null;
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { return null; }
+  }
+  return audioCtx;
+}
+function tone(freq, dur, type, vol, when) {
+  const ac = getAudio();
+  if (!ac) return;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol || 0.15, ac.currentTime + (when || 0));
+  gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (when || 0) + dur);
+  osc.connect(gain).connect(ac.destination);
+  osc.start(ac.currentTime + (when || 0));
+  osc.stop(ac.currentTime + (when || 0) + dur);
+}
+function playSound(name) {
+  if (!state.settings.sound) return;
+  switch (name) {
+    case 'click': tone(800, 0.05, 'square', 0.08); break;
+    case 'complete':
+      tone(523, 0.1, 'sine', 0.18); // C
+      tone(659, 0.1, 'sine', 0.18, 0.08); // E
+      tone(784, 0.18, 'sine', 0.18, 0.16); // G
+      break;
+    case 'hatch':
+      tone(200, 0.4, 'sawtooth', 0.1);
+      tone(220, 0.4, 'sawtooth', 0.1, 0.2);
+      break;
+    case 'reveal':
+      tone(523, 0.1, 'sine', 0.18);
+      tone(659, 0.1, 'sine', 0.18, 0.1);
+      tone(784, 0.1, 'sine', 0.18, 0.2);
+      tone(1047, 0.3, 'sine', 0.2, 0.3);
+      break;
+    case 'levelup':
+      tone(523, 0.12, 'triangle', 0.18);
+      tone(659, 0.12, 'triangle', 0.18, 0.1);
+      tone(784, 0.12, 'triangle', 0.18, 0.2);
+      tone(1047, 0.4, 'triangle', 0.22, 0.3);
+      break;
+    case 'achievement':
+      tone(659, 0.08, 'square', 0.15);
+      tone(784, 0.08, 'square', 0.15, 0.07);
+      tone(988, 0.18, 'square', 0.15, 0.14);
+      break;
+  }
+}
+
+// ============================================================
+// CONFETTI / PARTICLES
+// ============================================================
+let fxCanvas, fxCtx, particles = [], fxRunning = false;
+function initFX() {
+  fxCanvas = document.getElementById('fxCanvas');
+  fxCtx = fxCanvas.getContext('2d');
+  resizeFX();
+  window.addEventListener('resize', resizeFX);
+}
+function resizeFX() {
+  fxCanvas.width = window.innerWidth;
+  fxCanvas.height = window.innerHeight;
+}
+function burstConfetti(rarity) {
+  if (!state.settings.fx) return;
+  const colors = rarity === 'mythic'
+    ? ['#e84393','#fdcb6e','#a29bfe','#fff']
+    : rarity === 'legendary'
+    ? ['#fdcb6e','#ffd700','#fff']
+    : ['#ffd700','#ffed4e','#0984e3','#a29bfe','#00b894'];
+  const n = rarity === 'mythic' ? 100 : rarity === 'legendary' ? 70 : 50;
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2;
+    const speed = 4 + Math.random() * 6;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed + (Math.random()-0.5) * 2,
+      vy: Math.sin(angle) * speed - 2,
+      gravity: 0.18,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      size: 4 + Math.random() * 5,
+      life: 1.0,
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random()-0.5) * 0.3
+    });
+  }
+  if (!fxRunning) runFX();
+}
+function runFX() {
+  fxRunning = true;
+  const tick = () => {
+    fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.gravity;
+      p.vx *= 0.99;
+      p.life -= 0.012;
+      p.rot += p.rotV;
+      fxCtx.save();
+      fxCtx.translate(p.x, p.y);
+      fxCtx.rotate(p.rot);
+      fxCtx.globalAlpha = Math.max(0, p.life);
+      fxCtx.fillStyle = p.color;
+      fxCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 1.5);
+      fxCtx.restore();
+    });
+    if (particles.length > 0) {
+      requestAnimationFrame(tick);
+    } else {
+      fxRunning = false;
+      fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+    }
+  };
+  requestAnimationFrame(tick);
+}
+
+// ============================================================
+// STATS / TOP BAR
+// ============================================================
+function renderStats() {
+  document.getElementById('smallEggs').textContent = state.smallEggs;
+  document.getElementById('bigEggs').textContent = state.bigEggs;
+  document.getElementById('hugeEggs').textContent = state.hugeEggs;
+  document.getElementById('streak').textContent = state.streak;
+  document.getElementById('goalsCompleted').textContent = state.goalsCompleted;
+  document.getElementById('totalItems').textContent = state.inventory.length;
+  // Level + XP bar
+  document.getElementById('levelNum').textContent = state.level;
+  const total = totalXpForLevel(state.level);
+  const xpThis = state.xp - total;
+  const xpNeeded = xpForLevel(state.level);
+  document.getElementById('xpNow').textContent = xpThis;
+  document.getElementById('xpNeed').textContent = xpNeeded;
+  const pct = Math.max(0, Math.min(100, (xpThis / xpNeeded) * 100));
+  document.getElementById('xpFill').style.width = pct + '%';
+  document.getElementById('xpText').textContent = `${xpThis} / ${xpNeeded}`;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimeout;
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.className = 'toast' + (kind ? ' ' + kind : '');
+  t.innerHTML = `<span>${msg}</span>`;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
+}
+function toastWithUndo(msg) {
+  const t = document.getElementById('toast');
+  t.className = 'toast';
+  t.innerHTML = `<span>${msg}</span><button onclick="undoLastCompletion(); document.getElementById('toast').classList.remove('show');">Undo</button>`;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { t.classList.remove('show'); lastCompleted = null; }, 5000);
+}
+
+// ============================================================
+// TABS
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'eggs') renderEggs();
+    if (tab.dataset.tab === 'inventory') renderInventory();
+    if (tab.dataset.tab === 'warehouse') { buildDecorations(); updateWarehouseStatus(); }
+    if (tab.dataset.tab === 'stats') renderStatsTab();
+    if (tab.dataset.tab === 'achievements') renderAchievements();
+    playSound('click');
+  };
+});
+
+// ============================================================
+// SETTINGS / EXPORT / IMPORT / RESET
+// ============================================================
+function exportData() {
+  const dataStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dingus-eggs-backup-${todayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup downloaded.');
+}
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const loaded = JSON.parse(ev.target.result);
+      if (!confirm('Replace your current progress with this backup?')) return;
+      state = mergeDeep(state, loaded);
+      save();
+      location.reload();
+    } catch(err) {
+      toast('Invalid backup file.');
+    }
+  };
+  reader.readAsText(file);
+}
+function resetAll() {
+  if (!confirm('REALLY reset everything? All goals, eggs, items, and achievements will be wiped.')) return;
+  if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
+  localStorage.removeItem('dingusEggs');
+  location.reload();
+}
+function showOnboarding() {
+  document.getElementById('onboardingModal').classList.add('show');
+}
+function closeOnboarding() {
+  document.getElementById('onboardingModal').classList.remove('show');
+  state.settings.seenOnboarding = true;
+  save();
+}
+
+// Sound + FX toggles
+document.getElementById('soundToggle').addEventListener('change', (e) => {
+  state.settings.sound = e.target.checked;
+  save();
+  if (e.target.checked) playSound('click');
+});
+document.getElementById('fxToggle').addEventListener('change', (e) => {
+  state.settings.fx = e.target.checked;
+  save();
+});
+
+// ============================================================
+// SUPER DUPER SIMPLE MODE
+// ============================================================
+function applySimpleMode() {
+  if (state.settings.simpleMode) {
+    document.body.classList.add('simple-mode');
+    renderSimpleGoals();
+    updateSimpleStashLine();
+  } else {
+    document.body.classList.remove('simple-mode');
+  }
+  // keep toggle in sync
+  const t = document.getElementById('simpleModeToggle');
+  if (t) t.checked = state.settings.simpleMode;
+}
+
+function toggleSimpleMode() {
+  state.settings.simpleMode = !state.settings.simpleMode;
+  if (state.settings.simpleMode) checkAchievement('lock_in');
+  save();
+  applySimpleMode();
+  playSound('click');
+}
+
+function renderSimpleGoals() {
+  const list = document.getElementById('simpleGoalsList');
+  if (!list) return;
+  // Set the date
+  const dateEl = document.getElementById('legalPadDate');
+  if (dateEl) {
+    const d = new Date();
+    const opts = { weekday: 'long', month: 'short', day: 'numeric' };
+    dateEl.textContent = d.toLocaleDateString(undefined, opts);
+  }
+  if (state.goals.length === 0) {
+    list.innerHTML = '<div class="pad-empty">~ no goals yet ~<br>jot one down below to get started</div>';
+    return;
+  }
+  const today = new Date().toDateString();
+  // Sort: open first, then completed
+  const sorted = [...state.goals].sort((a, b) => {
+    const aDone = a.completed || (a.type === 'daily' && a.lastCompletedDate === today);
+    const bDone = b.completed || (b.type === 'daily' && b.lastCompletedDate === today);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return (b.createdAt || b.id) - (a.createdAt || a.id);
+  });
+  list.innerHTML = sorted.map(g => {
+    const isDoneToday = g.type === 'daily' && g.lastCompletedDate === today;
+    const isDone = g.completed || isDoneToday;
+    const dailyClass = g.type === 'daily' ? 'daily' : '';
+    const subgoals = g.subgoals || [];
+    const reward = rewardLabel(g.size);
+    return `
+      <div class="pad-row ${isDone ? 'done' : ''} ${dailyClass}" onclick="simpleCompleteGoal(${g.id})">
+        <span class="pad-check"></span>
+        <span class="pad-text">${escapeHtml(g.title)}<span class="pad-reward">${reward}</span></span>
+      </div>
+      ${subgoals.map((s, i) => `
+        <div class="pad-row sub ${s.done ? 'done' : ''}" onclick="event.stopPropagation(); simpleToggleSub(${g.id}, ${i})">
+          <span class="pad-check"></span>
+          <span class="pad-text">${escapeHtml(s.text)}<span class="pad-reward">+1🥚</span></span>
+        </div>
+      `).join('')}
+    `;
+  }).join('');
+}
+
+function simpleCompleteGoal(goalId) {
+  const goal = state.goals.find(g => g.id === goalId);
+  if (!goal) return;
+  const today = new Date().toDateString();
+  const isDoneToday = goal.type === 'daily' && goal.lastCompletedDate === today;
+  if (goal.completed || isDoneToday) {
+    // already done — no-op (in simple mode we don't undo via clicking again)
+    return;
+  }
+  completeGoal(goalId);
+  renderSimpleGoals();
+  updateSimpleStashLine();
+}
+
+function simpleToggleSub(goalId, subIdx) {
+  const goal = state.goals.find(g => g.id === goalId);
+  if (!goal) return;
+  const sub = goal.subgoals[subIdx];
+  if (sub.done) return;
+  toggleSubgoal(goalId, subIdx);
+  renderSimpleGoals();
+  updateSimpleStashLine();
+}
+
+function addSimpleGoal() {
+  const input = document.getElementById('simpleNewGoal');
+  const title = input.value.trim();
+  if (!title) { input.focus(); return; }
+  state.goals.push({
+    id: Date.now(),
+    title,
+    type: 'onetime',
+    size: 'medium',
+    category: 'Other',
+    priority: 'Med',
+    subgoals: [],
+    completed: false,
+    lastCompletedDate: null,
+    createdAt: Date.now()
+  });
+  input.value = '';
+  save();
+  renderSimpleGoals();
+  // Keep the input focused for adding more goals
+  input.focus();
+  playSound('click');
+}
+
+function updateSimpleStashLine() {
+  const el = document.getElementById('simpleStashLine');
+  if (!el) return;
+  const completed = state.goals.filter(g => {
+    const today = new Date().toDateString();
+    return g.completed || (g.type === 'daily' && g.lastCompletedDate === today);
+  }).length;
+  const total = state.goals.length;
+  el.textContent = `🥚 ${state.smallEggs} small · 🥚🥚 ${state.bigEggs} big · 🥚🥚🥚 ${state.hugeEggs} huge · 🔥 ${state.streak} streak · ✓ ${completed}/${total} done`;
+}
+
+// Wire up the toggle
+document.getElementById('simpleModeToggle').addEventListener('change', toggleSimpleMode);
+
+// ============================================================
+// INIT
+// ============================================================
+load();
+recalculateLevel();
+document.getElementById('soundToggle').checked = state.settings.sound;
+document.getElementById('fxToggle').checked = state.settings.fx;
+updateAvatarNameDisplay();
+drawAvatar();
+renderStats();
+renderGoals();
+initFX();
+initWarehouse();
+applySimpleMode();
+
+if (!state.settings.seenOnboarding) {
+  setTimeout(showOnboarding, 400);
+}
+// build-marker: v2
+</script>
+</body>
+</html>
