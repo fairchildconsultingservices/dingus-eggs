@@ -1084,6 +1084,72 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Visit Banner */
+  .visit-banner {
+    max-width: 1200px;
+    margin: 0 auto 10px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(232,67,147,0.12));
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    font-size: 0.92em;
+    color: var(--text);
+    flex-wrap: wrap;
+  }
+  .visit-banner .visit-code {
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+  }
+  /* Garage Travel Panel */
+  .travel-panel {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    width: 290px;
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 0.85em;
+    z-index: 100;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+  }
+  .travel-panel h3 { color: var(--gold); margin: 0 0 10px; font-size: 1em; text-align: center; }
+  .travel-row { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .travel-row label { color: var(--text-dim); font-size: 0.78em; }
+  .travel-row select,
+  .travel-row input {
+    padding: 6px 8px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9em;
+  }
+  .travel-row input { letter-spacing: 1.5px; text-transform: uppercase; }
+  .friend-code-display {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 8px;
+    background: var(--bg-2);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+  .friend-code-display span { flex: 1; }
+  body.simple-mode .visit-banner,
+  body.simple-mode .travel-panel { display: none !important; }
 </style>
 </head>
 <body>
@@ -1103,6 +1169,33 @@
     <button class="account-btn" onclick="openAuthModal('signin')">Sign In</button>
     <button class="account-btn secondary" onclick="openAuthModal('signup')">Create Account</button>
   </span>
+</div>
+
+<!-- Visit Banner — shown only while visiting a friend's hatchery -->
+<div class="visit-banner" id="visitBanner" style="display:none;"></div>
+
+<!-- Garage Travel Panel — shown only when in the Garage scene -->
+<div class="travel-panel" id="travelPanel" style="display:none;">
+  <h3>🚁 Travel to a Friend's Hatchery</h3>
+  <div class="travel-row">
+    <label>Your friend code (share this):</label>
+    <div class="friend-code-display">
+      <span id="ownFriendCode">—</span>
+      <button class="account-btn" onclick="copyOwnFriendCode()">📋 Copy</button>
+    </div>
+  </div>
+  <div class="travel-row">
+    <label>Pick a vehicle:</label>
+    <select id="travelVehicleSelect"><option value="">— select —</option></select>
+  </div>
+  <div class="travel-row">
+    <label>Friend's code:</label>
+    <input type="text" id="travelFriendCode" placeholder="ABCD-WXYZ" maxlength="9" autocomplete="off">
+  </div>
+  <div class="travel-row">
+    <button class="account-btn" onclick="doTravel()" style="width:100%; padding:8px;">🚁 Travel</button>
+  </div>
+  <div id="travelError" style="color:var(--red); font-size:0.85em; min-height:1.2em;"></div>
 </div>
 
 <!-- Simple Mode View -->
@@ -2064,8 +2157,12 @@ let lastCompletedTimer = null;
 // STORAGE
 // ============================================================
 function save() {
+  if (typeof visitMode !== 'undefined' && visitMode) return; // don't persist while visiting
   localStorage.setItem('dingusEggs', JSON.stringify(state));
-  if (currentUser) scheduleCloudPush();
+  if (currentUser) {
+    scheduleCloudPush();
+    if (typeof scheduleProfilePush === 'function') scheduleProfilePush();
+  }
 }
 function load() {
   const s = localStorage.getItem('dingusEggs');
@@ -2268,6 +2365,7 @@ async function afterLogin(user) {
     await cloudPush();
     toast('Progress backed up to the cloud.');
   }
+  if (typeof profilePush === 'function') await profilePush();
 }
 function rerenderAfterCloudLoad() {
   try {
@@ -2280,6 +2378,192 @@ function rerenderAfterCloudLoad() {
     renderGoals();
     applySimpleMode();
   } catch (e) { console.warn('Re-render after cloud load failed:', e); }
+}
+
+// ============================================================
+// FRIEND HATCHERY — public profile sync + friend codes
+// ============================================================
+let visitMode = null;       // { profile, vehicle, backup } when visiting, else null
+let profilePushTimer = null;
+
+function generateFriendCode() {
+  // 8 chars from an unambiguous alphabet, formatted as XXXX-XXXX
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code.slice(0, 4) + '-' + code.slice(4);
+}
+
+function scheduleProfilePush() {
+  if (profilePushTimer) clearTimeout(profilePushTimer);
+  profilePushTimer = setTimeout(profilePush, 1500);
+}
+
+async function profilePush() {
+  if (!sb || !currentUser || visitMode) return;
+  let codeChanged = false;
+  if (!state.friendCode) { state.friendCode = generateFriendCode(); codeChanged = true; }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { error } = await sb.from('public_profiles').upsert({
+        user_id: currentUser.id,
+        friend_code: state.friendCode,
+        display_name: (state.avatar && state.avatar.name) || '',
+        level: state.level || 1,
+        avatar: state.avatar || {},
+        equipped: state.equipped || {}
+      }, { onConflict: 'user_id' });
+      if (!error) {
+        if (codeChanged) {
+          localStorage.setItem('dingusEggs', JSON.stringify(state));
+          scheduleCloudPush();
+          const codeEl = document.getElementById('ownFriendCode');
+          if (codeEl) codeEl.textContent = state.friendCode;
+        }
+        return;
+      }
+      // Unique-violation on friend_code: regenerate and retry
+      if (error.code === '23505' && /friend_code/.test(error.message || '')) {
+        state.friendCode = generateFriendCode();
+        codeChanged = true;
+        continue;
+      }
+      console.warn('Profile push failed:', error);
+      return;
+    } catch (e) { console.warn('Profile push exception:', e); return; }
+  }
+}
+
+async function fetchFriendProfile(code) {
+  if (!sb) return null;
+  const cleaned = String(code || '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  if (!cleaned) return null;
+  try {
+    const { data, error } = await sb
+      .from('public_profiles')
+      .select('user_id, friend_code, display_name, level, avatar, equipped')
+      .eq('friend_code', cleaned)
+      .maybeSingle();
+    if (error) { console.warn('Friend fetch failed:', error); return null; }
+    return data;
+  } catch (e) { console.warn('Friend fetch exception:', e); return null; }
+}
+
+// ============================================================
+// VISIT MODE — render a friend's hatchery with their gear
+// ============================================================
+function enterVisit(profile, vehicleName) {
+  visitMode = {
+    profile: profile,
+    vehicle: vehicleName,
+    backup: {
+      avatar: JSON.parse(JSON.stringify(state.avatar)),
+      equipped: JSON.parse(JSON.stringify(state.equipped))
+    }
+  };
+  // Swap in friend's avatar + equipped for rendering
+  state.avatar = profile.avatar || state.avatar;
+  state.equipped = profile.equipped || {};
+  ['hat','weapon','pet','vehicle','background','frame'].forEach(slot => {
+    if (!(slot in state.equipped)) state.equipped[slot] = null;
+  });
+  // Force back to the main hatchery scene (no exploring sub-rooms as a guest)
+  if (typeof wh !== 'undefined') {
+    wh.scene = 'hatchery';
+    state.warehouseAvatarPos = { x: 300, y: 250 };
+    if (wh.petTrail) wh.petTrail = [];
+  }
+  updateVisitBanner();
+  if (typeof drawAvatar === 'function') drawAvatar();
+  if (typeof buildDecorations === 'function') buildDecorations();
+  if (typeof updateAvatarNameDisplay === 'function') updateAvatarNameDisplay();
+  if (typeof updateWarehouseStatus === 'function') updateWarehouseStatus();
+  toast('🚁 Touched down at ' + (profile.display_name || 'mystery hatchery') + "'s place!");
+}
+
+function exitVisit() {
+  if (!visitMode) return;
+  state.avatar = visitMode.backup.avatar;
+  state.equipped = visitMode.backup.equipped;
+  visitMode = null;
+  updateVisitBanner();
+  if (typeof drawAvatar === 'function') drawAvatar();
+  if (typeof buildDecorations === 'function') buildDecorations();
+  if (typeof updateAvatarNameDisplay === 'function') updateAvatarNameDisplay();
+  if (typeof updateWarehouseStatus === 'function') updateWarehouseStatus();
+  toast('🏠 Back at your own Hatchery.');
+}
+
+function updateVisitBanner() {
+  const banner = document.getElementById('visitBanner');
+  if (!banner) return;
+  if (visitMode) {
+    const name = escapeHtml(visitMode.profile.display_name || 'mystery hatchery');
+    const code = escapeHtml(visitMode.profile.friend_code || '');
+    const vehicle = escapeHtml(visitMode.vehicle || 'your vehicle');
+    banner.style.display = 'flex';
+    banner.innerHTML =
+      '<span>🚁 Visiting <strong>' + name + "</strong>'s Hatchery " +
+      '<span class="visit-code">(' + code + ')</span> &middot; flew in on <strong>' + vehicle + '</strong></span>' +
+      '<button class="account-btn" onclick="exitVisit()">🏠 Return Home</button>';
+  } else {
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+  }
+}
+
+// ============================================================
+// TRAVEL PANEL — Garage UI for picking a vehicle + friend code
+// ============================================================
+function refreshTravelUI() {
+  const ownCode = document.getElementById('ownFriendCode');
+  if (ownCode) ownCode.textContent = state.friendCode || '(generating…)';
+  const select = document.getElementById('travelVehicleSelect');
+  if (select) {
+    const vehicles = (state.inventory || []).filter(i => i.t === 'vehicle');
+    const seen = new Set();
+    const unique = vehicles.filter(v => seen.has(v.n) ? false : (seen.add(v.n), true));
+    select.innerHTML = unique.length === 0
+      ? '<option value="">No vehicles yet — hatch some eggs!</option>'
+      : '<option value="">— select a vehicle —</option>' +
+        unique.map(v => `<option value="${escapeHtml(v.n)}">${v.e || '🚗'} ${escapeHtml(v.n)}</option>`).join('');
+    if (state.equipped && state.equipped.vehicle && unique.some(v => v.n === state.equipped.vehicle.n)) {
+      select.value = state.equipped.vehicle.n;
+    }
+  }
+  const error = document.getElementById('travelError');
+  if (error) error.textContent = '';
+}
+
+function copyOwnFriendCode() {
+  const code = state.friendCode || '';
+  if (!code) { toast('Friend code not ready yet — try again in a moment.'); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(
+      () => toast('Friend code copied: ' + code),
+      () => toast('Code: ' + code)
+    );
+  } else {
+    toast('Code: ' + code);
+  }
+}
+
+async function doTravel() {
+  const errorEl = document.getElementById('travelError');
+  if (errorEl) errorEl.textContent = '';
+  if (!sb || !currentUser) { if (errorEl) errorEl.textContent = 'Sign in first to travel.'; return; }
+  const vehicleName = document.getElementById('travelVehicleSelect').value;
+  const code = (document.getElementById('travelFriendCode').value || '').trim().toUpperCase();
+  if (!vehicleName) { errorEl.textContent = 'Pick a vehicle.'; return; }
+  if (!code) { errorEl.textContent = "Enter a friend's code."; return; }
+  if (code === (state.friendCode || '')) { errorEl.textContent = "That's your own code!"; return; }
+  const owns = (state.inventory || []).some(i => i.t === 'vehicle' && i.n === vehicleName);
+  if (!owns) { errorEl.textContent = "You don't own that vehicle."; return; }
+  errorEl.textContent = 'Looking up hatchery…';
+  const profile = await fetchFriendProfile(code);
+  if (!profile) { errorEl.textContent = 'No hatchery found with that code.'; return; }
+  errorEl.textContent = '';
+  enterVisit(profile, vehicleName);
 }
 
 // ============================================================
@@ -3967,6 +4251,16 @@ function updateWarehouseStatus() {
   document.getElementById('warehouseStatus').textContent = equippedCount > 0
     ? `${equippedCount} item${equippedCount>1?'s':''} equipped. ${state.inventory.length - equippedCount} on display.`
     : `${state.inventory.length} items on display in The Hatchery.`;
+  // Travel panel: visible only in the Garage and when not currently visiting a friend
+  const tp = document.getElementById('travelPanel');
+  if (tp) {
+    if (wh && wh.scene === 'garage' && !visitMode) {
+      tp.style.display = 'block';
+      refreshTravelUI();
+    } else {
+      tp.style.display = 'none';
+    }
+  }
 }
 
 function drawMarketplaceStall(ctx, s) {
@@ -4276,6 +4570,7 @@ function drawPedestal(ctx, x, y, item, isBack) {
 }
 
 function enterTrophyRoom() {
+  if (visitMode) { toast("You're a guest here — Return Home to explore your own rooms."); return; }
   wh.scene = 'trophy';
   wh.trophyAvatarPos = { x: 540, y: 320 }; // entering from the right (near return door)
   wh.hatcheryDoor.x = 542; // return door on the RIGHT wall of trophy room
@@ -4287,6 +4582,7 @@ function enterTrophyRoom() {
 }
 
 function enterGarage() {
+  if (visitMode) { toast("You're a guest here — Return Home to use your Garage."); return; }
   wh.scene = 'garage';
   wh.garageAvatarPos = { x: 60, y: 320 }; // entering from the left (near return door)
   wh.hatcheryDoor.x = 8; // return door on the LEFT wall of garage
@@ -4723,6 +5019,7 @@ function drawPedestalCombat(ctx, p, near, label) {
 }
 
 function enterColosseum() {
+  if (visitMode) { toast("You're a guest here — Return Home to enter your Colosseum."); return; }
   wh.scene = 'colosseum';
   wh.colosseumAvatarPos = { x: 100, y: 320 };
   wh.hatcheryDoor.x = 542; // return door on right
@@ -5689,7 +5986,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v3.2-default-huge
+// build-marker: v4-friend-hatcheries
 </script>
 </body>
 </html>
