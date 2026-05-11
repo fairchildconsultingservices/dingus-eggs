@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -1028,6 +1029,61 @@
     font-size: 1.2em;
     font-style: italic;
   }
+  /* Account / Cloud Sync Bar */
+  .account-bar {
+    max-width: 1200px;
+    margin: 0 auto 8px;
+    padding: 6px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85em;
+    color: var(--text-dim);
+    flex-wrap: wrap;
+  }
+  body.simple-mode .account-bar { display: none; }
+  #syncIndicator {
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  #accountActions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .account-btn {
+    background: var(--gold);
+    color: #1a1a1a;
+    border: none;
+    padding: 5px 12px;
+    font-size: 0.85em;
+    font-family: inherit;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  .account-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .account-btn.secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .account-btn.secondary:hover { color: var(--text); border-color: var(--text-dim); }
+  .account-email {
+    color: var(--text);
+    font-weight: 600;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -1038,6 +1094,15 @@
     <span class="simple-mode-track"><span class="simple-mode-thumb"></span></span>
     <span class="simple-mode-label">🎯 Super Duper Simple Mode</span>
   </label>
+</div>
+
+<!-- Account / Cloud Sync Bar -->
+<div class="account-bar" id="accountBar">
+  <span id="syncIndicator">☁️ Local only</span>
+  <span id="accountActions">
+    <button class="account-btn" onclick="openAuthModal('signin')">Sign In</button>
+    <button class="account-btn secondary" onclick="openAuthModal('signup')">Create Account</button>
+  </span>
 </div>
 
 <!-- Simple Mode View -->
@@ -1401,6 +1466,32 @@
       <p style="color:var(--text-dim); font-size:0.9em; margin-top: 12px;">All data saves to your browser — refresh anytime, your progress sticks. Export a backup from Settings if you want.</p>
     </div>
     <button onclick="closeOnboarding()">Let's go!</button>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <h2 id="authTitle">Sign In</h2>
+    <p style="font-size:0.85em; color:var(--text-dim); margin: 6px 0 14px;">
+      Save your goals to the cloud so they follow you between devices and survive code updates.
+    </p>
+    <div style="display:flex; flex-direction:column; gap:8px; text-align:left;">
+      <label style="font-size:0.8em; color:var(--text-dim);">Email</label>
+      <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"
+             style="padding:8px; background:var(--bg-2); color:var(--text); border:1px solid #555; border-radius:4px; font-family:inherit;">
+      <label style="font-size:0.8em; color:var(--text-dim); margin-top:6px;">Password</label>
+      <input type="password" id="authPassword" placeholder="at least 6 characters" autocomplete="current-password"
+             style="padding:8px; background:var(--bg-2); color:var(--text); border:1px solid #555; border-radius:4px; font-family:inherit;"
+             onkeydown="if(event.key==='Enter')authSubmit()">
+    </div>
+    <div id="authError" style="color:var(--red); font-size:0.85em; margin-top:10px; min-height:1.2em;"></div>
+    <div id="authMsg" style="color:var(--green); font-size:0.85em; margin-top:4px; min-height:1.2em;"></div>
+    <div style="display:flex; gap:8px; justify-content:center; margin-top:14px;">
+      <button onclick="closeAuthModal()" class="secondary">Maybe Later</button>
+      <button onclick="authSubmit()" id="authSubmitBtn">Sign In</button>
+    </div>
+    <p id="authSwapText" style="margin-top:12px; font-size:0.85em; color:var(--text-dim);"></p>
   </div>
 </div>
 
@@ -1972,7 +2063,10 @@ let lastCompletedTimer = null;
 // ============================================================
 // STORAGE
 // ============================================================
-function save() { localStorage.setItem('dingusEggs', JSON.stringify(state)); }
+function save() {
+  localStorage.setItem('dingusEggs', JSON.stringify(state));
+  if (currentUser) scheduleCloudPush();
+}
 function load() {
   const s = localStorage.getItem('dingusEggs');
   if (s) {
@@ -1992,6 +2086,182 @@ function mergeDeep(target, source) {
     }
   }
   return target;
+}
+
+// ============================================================
+// SUPABASE CLOUD SYNC
+// ============================================================
+const SUPABASE_URL = 'https://qljvknypqyvlshzkxgrn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_uizBCBnnOgQIg-UzRHuzyw_mUxkKlpz';
+const sb = (typeof window !== 'undefined' && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+let currentUser = null;
+let cloudSyncTimer = null;
+let cloudSyncing = false;
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+}
+
+async function cloudFetch() {
+  if (!sb || !currentUser) return null;
+  try {
+    const { data, error } = await sb
+      .from('user_state')
+      .select('state')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if (error) { console.warn('Cloud fetch failed:', error); return null; }
+    return data ? data.state : null;
+  } catch (e) { console.warn('Cloud fetch exception:', e); return null; }
+}
+
+async function cloudPush() {
+  if (!sb || !currentUser) return;
+  cloudSyncing = true;
+  updateSyncIndicator();
+  try {
+    const { error } = await sb
+      .from('user_state')
+      .upsert({ user_id: currentUser.id, state: state }, { onConflict: 'user_id' });
+    if (error) console.warn('Cloud push failed:', error);
+  } catch (e) { console.warn('Cloud push exception:', e); }
+  cloudSyncing = false;
+  updateSyncIndicator();
+}
+
+function scheduleCloudPush() {
+  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(cloudPush, 1200);
+}
+
+function updateSyncIndicator() {
+  const ind = document.getElementById('syncIndicator');
+  const actions = document.getElementById('accountActions');
+  if (!ind || !actions) return;
+  if (!currentUser) {
+    ind.textContent = '☁️ Local only';
+    ind.title = 'Sign in to sync across devices';
+    actions.innerHTML =
+      '<button class="account-btn" onclick="openAuthModal(\'signin\')">Sign In</button>' +
+      '<button class="account-btn secondary" onclick="openAuthModal(\'signup\')">Create Account</button>';
+  } else if (cloudSyncing) {
+    ind.textContent = '☁️ Syncing…';
+    ind.title = '';
+    actions.innerHTML =
+      '<span class="account-email">' + escapeHtml(currentUser.email) + '</span>' +
+      '<button class="account-btn secondary" onclick="authSignOut()">Sign Out</button>';
+  } else {
+    ind.textContent = '✅ Cloud synced';
+    ind.title = currentUser.email;
+    actions.innerHTML =
+      '<span class="account-email">' + escapeHtml(currentUser.email) + '</span>' +
+      '<button class="account-btn secondary" onclick="authSignOut()">Sign Out</button>';
+  }
+}
+
+// ============================================================
+// AUTH UI
+// ============================================================
+function openAuthModal(mode) {
+  if (!sb) { toast('Cloud sync not available — try again in a moment.'); return; }
+  document.getElementById('authModal').classList.add('show');
+  document.getElementById('authError').textContent = '';
+  document.getElementById('authMsg').textContent = '';
+  setAuthMode(mode || 'signin');
+  setTimeout(() => { const el = document.getElementById('authEmail'); if (el) el.focus(); }, 50);
+}
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('show');
+}
+function setAuthMode(mode) {
+  const title = document.getElementById('authTitle');
+  const btn = document.getElementById('authSubmitBtn');
+  const swap = document.getElementById('authSwapText');
+  if (mode === 'signup') {
+    title.textContent = 'Create Account';
+    btn.textContent = 'Sign Up';
+    swap.innerHTML = 'Already have an account? <a style="color:var(--gold);cursor:pointer;" onclick="setAuthMode(\'signin\')">Sign in</a>';
+  } else {
+    title.textContent = 'Sign In';
+    btn.textContent = 'Sign In';
+    swap.innerHTML = 'Don\'t have an account? <a style="color:var(--gold);cursor:pointer;" onclick="setAuthMode(\'signup\')">Create one</a>';
+  }
+  document.getElementById('authModal').dataset.mode = mode;
+}
+function authSubmit() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if (!email || !password) { setAuthError('Email and password are required.'); return; }
+  if (password.length < 6) { setAuthError('Password must be at least 6 characters.'); return; }
+  const mode = document.getElementById('authModal').dataset.mode;
+  if (mode === 'signup') authSignUp(email, password);
+  else authSignIn(email, password);
+}
+function setAuthError(msg) { document.getElementById('authError').textContent = msg; document.getElementById('authMsg').textContent = ''; }
+function setAuthMsg(msg) { document.getElementById('authMsg').textContent = msg; document.getElementById('authError').textContent = ''; }
+function authBusy(busy) { document.getElementById('authSubmitBtn').disabled = busy; }
+
+async function authSignUp(email, password) {
+  if (!sb) return;
+  authBusy(true);
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password });
+    authBusy(false);
+    if (error) { setAuthError(error.message); return; }
+    if (data.user && data.session) await afterLogin(data.user);
+    else setAuthMsg('Check your email to confirm your account, then sign in.');
+  } catch (e) { authBusy(false); setAuthError('Sign-up failed: ' + e.message); }
+}
+async function authSignIn(email, password) {
+  if (!sb) return;
+  authBusy(true);
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    authBusy(false);
+    if (error) { setAuthError(error.message); return; }
+    await afterLogin(data.user);
+  } catch (e) { authBusy(false); setAuthError('Sign-in failed: ' + e.message); }
+}
+async function authSignOut() {
+  if (!sb) return;
+  if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; await cloudPush(); }
+  await sb.auth.signOut();
+  currentUser = null;
+  updateSyncIndicator();
+  toast('Signed out. Local data preserved.');
+}
+async function afterLogin(user) {
+  currentUser = user;
+  closeAuthModal();
+  cloudSyncing = true; updateSyncIndicator();
+  const cloud = await cloudFetch();
+  if (cloud && Object.keys(cloud).length > 0) {
+    state = mergeDeep(state, cloud);
+    localStorage.setItem('dingusEggs', JSON.stringify(state));
+    cloudSyncing = false;
+    rerenderAfterCloudLoad();
+    updateSyncIndicator();
+    toast('Cloud progress loaded.');
+  } else {
+    cloudSyncing = false;
+    await cloudPush();
+    toast('Progress backed up to the cloud.');
+  }
+}
+function rerenderAfterCloudLoad() {
+  try {
+    recalculateLevel();
+    document.getElementById('soundToggle').checked = state.settings.sound;
+    document.getElementById('fxToggle').checked = state.settings.fx;
+    updateAvatarNameDisplay();
+    drawAvatar();
+    renderStats();
+    renderGoals();
+    applySimpleMode();
+  } catch (e) { console.warn('Re-render after cloud load failed:', e); }
 }
 
 // ============================================================
@@ -5382,11 +5652,27 @@ renderGoals();
 initFX();
 initWarehouse();
 applySimpleMode();
+updateSyncIndicator();
+
+// Resume Supabase session if one exists (keeps you logged in across reloads)
+if (sb) {
+  sb.auth.getSession().then(({ data }) => {
+    if (data && data.session) {
+      afterLogin(data.session.user);
+    }
+  }).catch(e => console.warn('Session check failed:', e));
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      updateSyncIndicator();
+    }
+  });
+}
 
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v2
+// build-marker: v3-supabase
 </script>
 </body>
 </html>
