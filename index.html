@@ -1296,7 +1296,7 @@
       <h2 id="goalFormTitle">Add a Goal</h2>
       <div class="add-goal-form">
         <div class="form-row">
-          <input type="text" id="goalTitle" placeholder="What do you want to crush?">
+          <input type="text" id="goalTitle" placeholder="What do you want to crush?" onkeydown="if(event.key==='Enter'){event.preventDefault();saveGoal();}">
           <select id="goalType">
             <option value="onetime">One-time</option>
             <option value="daily">Daily habit</option>
@@ -5986,7 +5986,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v4-friend-hatcheries
+// build-marker: v4.1-enter-to-save-goal
 </script>
 </body>
 </html>
