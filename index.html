@@ -1210,9 +1210,9 @@
           </select>
           <select id="goalSize">
             <option value="small">Small (1🥚)</option>
-            <option value="medium" selected>Medium (3🥚)</option>
+            <option value="medium">Medium (3🥚)</option>
             <option value="big">Big (5🥚+1🥚🥚)</option>
-            <option value="huge">Huge (3🥚🥚+1🥚🥚🥚)</option>
+            <option value="huge" selected>Huge (3🥚🥚+1🥚🥚🥚)</option>
           </select>
           <select id="goalCategory">
             <option value="Health">🏃 Health</option>
@@ -5625,7 +5625,7 @@ function addSimpleGoal() {
     id: Date.now(),
     title,
     type: 'onetime',
-    size: 'medium',
+    size: 'huge',
     category: 'Other',
     priority: 'Med',
     subgoals: [],
@@ -5689,7 +5689,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v3.1-daily-subgoals
+// build-marker: v3.2-default-huge
 </script>
 </body>
 </html>
