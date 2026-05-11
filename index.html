@@ -2076,6 +2076,21 @@ function load() {
       state = mergeDeep(state, loaded);
     } catch(e) { console.error('Load failed:', e); }
   }
+  if (normalizeState()) save();
+}
+// Daily rollover: reset subgoals of daily goals at the start of each new day.
+// Returns true if any state was changed.
+function normalizeState() {
+  let changed = false;
+  const today = todayKey();
+  (state.goals || []).forEach(g => {
+    if (g.type === 'daily' && g.subgoalsResetDate !== today) {
+      (g.subgoals || []).forEach(s => { if (s.done) s.done = false; });
+      g.subgoalsResetDate = today;
+      changed = true;
+    }
+  });
+  return changed;
 }
 function mergeDeep(target, source) {
   for (const key in source) {
@@ -2240,12 +2255,15 @@ async function afterLogin(user) {
   const cloud = await cloudFetch();
   if (cloud && Object.keys(cloud).length > 0) {
     state = mergeDeep(state, cloud);
+    const changed = normalizeState();
     localStorage.setItem('dingusEggs', JSON.stringify(state));
+    if (changed) scheduleCloudPush();
     cloudSyncing = false;
     rerenderAfterCloudLoad();
     updateSyncIndicator();
     toast('Cloud progress loaded.');
   } else {
+    normalizeState();
     cloudSyncing = false;
     await cloudPush();
     toast('Progress backed up to the cloud.');
@@ -5560,16 +5578,15 @@ function renderSimpleGoals() {
     const isDone = g.completed || isDoneToday;
     const dailyClass = g.type === 'daily' ? 'daily' : '';
     const subgoals = g.subgoals || [];
-    const reward = rewardLabel(g.size);
     return `
       <div class="pad-row ${isDone ? 'done' : ''} ${dailyClass}" onclick="simpleCompleteGoal(${g.id})">
         <span class="pad-check"></span>
-        <span class="pad-text">${escapeHtml(g.title)}<span class="pad-reward">${reward}</span></span>
+        <span class="pad-text">${escapeHtml(g.title)}</span>
       </div>
       ${subgoals.map((s, i) => `
         <div class="pad-row sub ${s.done ? 'done' : ''}" onclick="event.stopPropagation(); simpleToggleSub(${g.id}, ${i})">
           <span class="pad-check"></span>
-          <span class="pad-text">${escapeHtml(s.text)}<span class="pad-reward">+1🥚</span></span>
+          <span class="pad-text">${escapeHtml(s.text)}</span>
         </div>
       `).join('')}
     `;
@@ -5672,7 +5689,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v3-supabase
+// build-marker: v3.1-daily-subgoals
 </script>
 </body>
 </html>
