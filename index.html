@@ -581,6 +581,71 @@
   /* HUD inline icons */
   .btn-icon { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; display: inline-block; }
   .tab-icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 5px; display: inline-block; object-fit: contain; }
+  /* Layered avatar (paper-doll) */
+  .layered-avatar {
+    position: relative;
+    width: 160px;
+    height: 240px;
+    margin: 0 auto;
+  }
+  .layered-avatar .la-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .layered-avatar .la-body  { z-index: 1; }
+  .layered-avatar .la-outfit{ z-index: 2; }
+  .layered-avatar .la-hair  { z-index: 3; }
+  /* Layered avatar pickers in customizer */
+  .layered-picker {
+    margin: 14px 0;
+    padding: 12px;
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .layered-picker h4 { color: var(--gold); margin: 0 0 10px; font-size: 0.95em; }
+  .layered-picker-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .layered-picker-row label { color: var(--text-dim); font-size: 0.85em; min-width: 90px; }
+  .lp-tile {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--bg-2);
+    border: 2px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8em;
+    color: var(--text);
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .lp-tile:hover { border-color: var(--text-dim); }
+  .lp-tile.active { border-color: var(--gold); background: rgba(255,215,0,0.12); }
+  .lp-preview {
+    width: 220px;
+    height: 320px;
+    position: relative;
+    margin: 0 auto;
+  }
+  .lp-preview .la-layer {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  /* Marketplace shopkeeper */
+  .marketplace-header { display: flex; align-items: center; gap: 14px; text-align: left; margin-bottom: 14px; }
+  .marketplace-ducky { width: 110px; height: 110px; object-fit: contain; flex-shrink: 0; transition: transform 0.25s ease; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35)); }
+  .marketplace-ducky.cheer { animation: ducky-bounce 0.7s ease; }
+  @keyframes ducky-bounce {
+    0%   { transform: translateY(0)    scale(1); }
+    35%  { transform: translateY(-12px) scale(1.08); }
+    70%  { transform: translateY(0)    scale(1); }
+    100% { transform: translateY(0)    scale(1); }
+  }
+  .marketplace-header-text { flex: 1; }
   .hatching { animation: shake 0.4s infinite; }
   @keyframes shake {
     0%, 100% { transform: rotate(0); }
@@ -1291,7 +1356,12 @@
       <h2>Your Avatar</h2>
       <div class="avatar-display">
         <div class="avatar-frame" id="avatarFrame">
-          <canvas id="avatarCanvas" width="64" height="64"></canvas>
+          <canvas id="avatarCanvas" width="64" height="64" style="display:none;"></canvas>
+          <div class="layered-avatar" id="layeredAvatar">
+            <img class="la-layer la-body" id="laBody" src="assets/base-body-light.png" alt="">
+            <img class="la-layer la-outfit" id="laOutfit" src="assets/outfit-tee.png" alt="">
+            <img class="la-layer la-hair" id="laHair" src="assets/hair-messy.png" alt="">
+          </div>
         </div>
         <div style="width:100%;">
           <div style="display:flex; justify-content:space-between; font-size:0.8em; color:var(--text-dim); margin-bottom:2px;">
@@ -1583,6 +1653,23 @@
 <div class="modal-overlay" id="customizerModal">
   <div class="modal wide">
     <h2>Design Your Avatar</h2>
+
+    <!-- Layered avatar (new look) -->
+    <div class="layered-picker">
+      <h4>🎨 Layered Style</h4>
+      <div style="display:grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start;">
+        <div class="lp-preview">
+          <img class="la-layer la-body"   id="lpBody"   src="" alt="">
+          <img class="la-layer la-outfit" id="lpOutfit" src="" alt="">
+          <img class="la-layer la-hair"   id="lpHair"   src="" alt="">
+        </div>
+        <div id="layeredPickerOptions"></div>
+      </div>
+    </div>
+
+    <hr style="border-color: var(--border); margin: 16px 0;">
+
+    <h4 style="color:var(--text-dim); margin: 0 0 10px;">🧱 Classic pixel avatar (legacy)</h4>
     <div class="customizer">
       <div>
         <canvas id="customizerCanvas" width="64" height="64"></canvas>
@@ -1652,10 +1739,15 @@
 <!-- MARKETPLACE MODAL -->
 <div class="modal-overlay" id="marketplaceModal">
   <div class="modal wide">
-    <h2>🏪 Egg Marketplace</h2>
-    <p style="color:var(--text-dim); font-size:0.9em; margin-bottom:14px;">
-      Trade up your eggs for bigger ones with better drop odds. Trading down loses value, so think carefully.
-    </p>
+    <div class="marketplace-header">
+      <img id="marketplaceDucky" class="marketplace-ducky" src="assets/ducky-idle.png" alt="Ducky">
+      <div class="marketplace-header-text">
+        <h2 style="margin:0;">🏪 Egg Marketplace</h2>
+        <p id="marketplaceDuckyLine" style="color:var(--text-dim); font-size:0.9em; margin:6px 0 0;">
+          Trade up your eggs for bigger ones with better drop odds. Trading down loses value, so think carefully.
+        </p>
+      </div>
+    </div>
     <div style="display:grid; grid-template-columns:1fr; gap:10px; text-align:left;">
       <!-- Trade up: 5 small -> 1 big -->
       <div class="trade-row">
@@ -1742,10 +1834,10 @@ const ITEMS = {
     { e: '🦴', n: 'Bone', d: 'A simple bone', t: 'item' },
     { e: '🪨', n: 'Pebble', d: 'Just a rock', t: 'item' },
     { e: '🍎', n: 'Apple', d: 'Healthy snack', t: 'item' },
-    { e: '🐭', n: 'Pet Mouse', d: 'Tiny squeaky friend', t: 'pet' },
+    { e: '🐭', n: 'Pet Mouse', d: 'Tiny squeaky friend', t: 'pet', img: 'creature-common.png' },
     { e: '🐸', n: 'Pet Frog', d: 'Ribbits encouragingly', t: 'pet' },
     { e: '🪙', n: 'Lucky Coin', d: 'A coin for fortune', t: 'item' },
-    { e: '🎁', n: 'Mystery Gift', d: 'Looks promising', t: 'item' },
+    { e: '🎁', n: 'Mystery Gift', d: 'Looks promising', t: 'item', img: 'object-treasure.png' },
     { e: '🟤', n: 'Wood Frame', d: 'Rustic wooden border', t: 'frame', frameClass: 'wood' },
     { e: '🏛️', n: 'Iron Frame', d: 'Sturdy industrial border', t: 'frame', frameClass: 'iron' },
     { e: '🌰', n: 'Acorn', d: 'Tiny seed of potential', t: 'item' },
@@ -1765,7 +1857,7 @@ const ITEMS = {
   uncommon: [
     { e: '🎒', n: 'Backpack', d: 'Carry your dreams', t: 'accessory' },
     { e: '🧣', n: 'Cool Scarf', d: 'Drip incoming', t: 'accessory' },
-    { e: '🐱', n: 'Pet Cat', d: 'Judgmental but loyal', t: 'pet' },
+    { e: '🐱', n: 'Pet Cat', d: 'Judgmental but loyal', t: 'pet', img: 'creature-uncommon.png' },
     { e: '🐶', n: 'Pet Puppy', d: 'Will follow you anywhere', t: 'pet' },
     { e: '🐰', n: 'Pet Rabbit', d: 'Hops with joy', t: 'pet' },
     { e: '🌲', n: 'Forest Background', d: 'Peaceful woods', t: 'background' },
@@ -1791,15 +1883,15 @@ const ITEMS = {
     { e: '⚔️', n: 'Iron Sword', d: 'Heavy and reliable', t: 'weapon', power: 14 },
   ],
   rare: [
-    { e: '🐺', n: 'Pet Wolf', d: 'Lone wanderer companion', t: 'pet' },
+    { e: '🐺', n: 'Pet Wolf', d: 'Lone wanderer companion', t: 'pet', img: 'creature-rare.png' },
     { e: '🦊', n: 'Pet Fox', d: 'Sly and clever', t: 'pet' },
     { e: '🦅', n: 'Pet Eagle', d: 'Soars above your goals', t: 'pet' },
-    { e: '⚔️', n: 'Steel Sword', d: 'Battle-tested blade', t: 'weapon', power: 22 },
+    { e: '⚔️', n: 'Steel Sword', d: 'Battle-tested blade', t: 'weapon', power: 22, img: 'weapon-sword.png' },
     { e: '🏹', n: 'Longbow', d: 'For the precise', t: 'weapon', power: 20 },
     { e: '🏰', n: 'Castle Background', d: 'Live like royalty', t: 'background' },
     { e: '🌃', n: 'City Background', d: 'Neon nights', t: 'background' },
     { e: '🚲', n: 'Bicycle', d: 'Eco-friendly ride', t: 'vehicle' },
-    { e: '👑', n: 'Crown', d: 'You earned it', t: 'accessory' },
+    { e: '👑', n: 'Crown', d: 'You earned it', t: 'accessory', img: 'object-crown.png' },
     { e: '💎', n: 'Gemstone', d: 'Pure value', t: 'item' },
     { e: '🥇', n: 'Gold Frame', d: 'Glowing gold trim', t: 'frame', frameClass: 'gold' },
     { e: '🔷', n: 'Crystal Frame', d: 'Cut crystal sparkle', t: 'frame', frameClass: 'crystal' },
@@ -1818,11 +1910,11 @@ const ITEMS = {
     { e: '✨', n: 'Witch Hat', d: 'Brewing trouble in style', t: 'accessory', svgKey: 'witchHat', customDraw: 'witchHat' },
   ],
   epic: [
-    { e: '🐻', n: 'Pet Newfoundland', d: 'Massive fluffy guardian', t: 'pet' },
+    { e: '🐻', n: 'Pet Newfoundland', d: 'Massive fluffy guardian', t: 'pet', img: 'creature-epic.png' },
     { e: '🦁', n: 'Pet Lion', d: 'King of the jungle', t: 'pet' },
     { e: '🐯', n: 'Pet Tiger', d: 'Majestic predator', t: 'pet' },
     { e: '🦄', n: 'Pet Unicorn', d: 'Magical and rare', t: 'pet' },
-    { e: '🏎️', n: 'Sports Car', d: 'Vroom vroom', t: 'vehicle' },
+    { e: '🏎️', n: 'Sports Car', d: 'Vroom vroom', t: 'vehicle', img: 'vehicle-car.png' },
     { e: '🛥️', n: 'Speedboat', d: 'Cut through waves', t: 'vehicle' },
     { e: '🪄', n: 'Magic Wand', d: 'Channel the arcane', t: 'weapon', power: 32 },
     { e: '🌌', n: 'Galaxy Background', d: 'You contain multitudes', t: 'background' },
@@ -1840,14 +1932,14 @@ const ITEMS = {
     { e: '🏔️', n: 'Mountain Background', d: 'Snow-capped grandeur', t: 'background' },
     { e: '🏝️', n: 'Tropical Island Background', d: 'Pure paradise', t: 'background' },
     { e: '🌟', n: 'Star Pendant', d: 'Wear your win', t: 'accessory' },
-    { e: '✨', n: 'Wizard Hat', d: 'Pointed and star-spangled', t: 'accessory', svgKey: 'wizardHat', customDraw: 'wizardHat' },
+    { e: '✨', n: 'Wizard Hat', d: 'Pointed and star-spangled', t: 'accessory', svgKey: 'wizardHat', customDraw: 'wizardHat', img: 'object-wizard-hat.png' },
     { e: '⚔️', n: 'Greatsword', d: 'Two-handed, devastating', t: 'weapon', power: 32 },
   ],
   legendary: [
-    { e: '🐉', n: 'Pet Dragon', d: 'A real dragon. Yes. A dragon.', t: 'pet' },
-    { e: '🔱', n: "Poseidon's Trident", d: 'Command the seas', t: 'weapon', power: 52 },
-    { e: '🚁', n: 'Helicopter', d: 'Sky is the limit', t: 'vehicle' },
-    { e: '🛸', n: 'UFO', d: 'Definitely yours now', t: 'vehicle' },
+    { e: '🐉', n: 'Pet Dragon', d: 'A real dragon. Yes. A dragon.', t: 'pet', img: 'creature-legendary.png' },
+    { e: '🔱', n: "Poseidon's Trident", d: 'Command the seas', t: 'weapon', power: 52, img: 'weapon-trident.png' },
+    { e: '🚁', n: 'Helicopter', d: 'Sky is the limit', t: 'vehicle', img: 'vehicle-helicopter.png' },
+    { e: '🛸', n: 'UFO', d: 'Definitely yours now', t: 'vehicle', img: 'vehicle-ufo.png' },
     { e: '🦖', n: 'Pet T-Rex', d: 'Tiny arms, huge heart', t: 'pet' },
     { e: '🐙', n: 'Pet Kraken', d: 'Eight times the love', t: 'pet' },
     { e: '🌋', n: 'Volcano Background', d: 'Power incarnate', t: 'background' },
@@ -1866,9 +1958,9 @@ const ITEMS = {
   ],
   mythic: [
     { e: '✨', n: 'Wish Star', d: 'One wish, anything you want', t: 'item' },
-    { e: '⚡', n: "Zeus's Lightning", d: 'Pure divine power', t: 'weapon', power: 78 },
-    { e: '🔥', n: 'Pet Phoenix', d: 'Reborn from ashes daily', t: 'pet' },
-    { e: '🚀', n: 'Personal Rocket', d: 'To the moon, literally', t: 'vehicle' },
+    { e: '⚡', n: "Zeus's Lightning", d: 'Pure divine power', t: 'weapon', power: 78, img: 'weapon-lightning.png' },
+    { e: '🔥', n: 'Pet Phoenix', d: 'Reborn from ashes daily', t: 'pet', img: 'creature-mythic.png' },
+    { e: '🚀', n: 'Personal Rocket', d: 'To the moon, literally', t: 'vehicle', img: 'object-rocket.png' },
     { e: '👁️', n: 'Eye of Providence', d: 'Sees all your future wins', t: 'item' },
     { e: '🪐', n: 'Infinity Stone', d: 'Reality bends to you', t: 'item' },
     { e: '♾️', n: 'Infinity Frame', d: 'Border that loops forever', t: 'frame', frameClass: 'infinity' },
@@ -2242,7 +2334,11 @@ preloadAssets([
   'hatch-burst.png', 'light-ring.png',
   'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png',
   'icon-add.png','icon-edit.png','icon-delete.png','icon-settings.png','icon-close.png','icon-undo.png',
-  'tab-goals.png','tab-eggs.png','tab-inventory.png'
+  'tab-goals.png','tab-eggs.png','tab-inventory.png',
+  // Layered avatar
+  'base-body-pale.png','base-body-light.png','base-body-tan.png','base-body-deep.png',
+  'hair-messy.png','hair-long.png','hair-afro.png','hair-mohawk.png',
+  'outfit-tee.png','outfit-hoodie.png','outfit-overalls.png','outfit-dress.png','outfit-suit.png','outfit-superhero.png'
 ]);
 
 // ============================================================
@@ -3013,6 +3109,8 @@ function drawMouth(px, av) {
 }
 
 function drawAvatar(canvasId) {
+  // Keep the layered avatar (profile + customizer previews) in sync
+  if (typeof renderLayeredAvatar === 'function') renderLayeredAvatar();
   const canvas = document.getElementById(canvasId || 'avatarCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -3088,6 +3186,7 @@ function drawCustomizerAvatar() {
 
 function openCustomizer() {
   buildCustomizerOptions();
+  buildLayeredPicker();
   drawCustomizerAvatar();
   document.getElementById('customAvatarName').value = state.avatar.name || '';
   document.getElementById('customizerModal').classList.add('show');
@@ -3125,6 +3224,73 @@ function randomizeAvatar() {
 function updateAvatarNameDisplay() {
   const span = document.getElementById('avatarNameDisplay');
   span.textContent = state.avatar.name ? `— ${state.avatar.name}` : '';
+}
+
+// ============================================================
+// LAYERED AVATAR (paper-doll img stack)
+// ============================================================
+const LAYERED_BODY_TONES   = ['pale', 'light', 'tan', 'deep'];
+const LAYERED_HAIR_STYLES  = ['none', 'messy', 'long', 'afro', 'mohawk'];
+const LAYERED_OUTFIT_STYLES = ['tee', 'hoodie', 'overalls', 'dress', 'suit', 'superhero'];
+
+function ensureLayeredDefaults() {
+  if (!state.avatar.layered) {
+    state.avatar.layered = { bodyTone: 'light', hairStyle: 'messy', outfitStyle: 'tee' };
+  }
+}
+
+function setLayerImg(el, name) {
+  if (!el) return;
+  if (!name) { el.removeAttribute('src'); el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.src = ASSET_PATH + name;
+}
+
+function renderLayeredAvatar() {
+  ensureLayeredDefaults();
+  const la = state.avatar.layered;
+  const bodyFile   = `base-body-${la.bodyTone}.png`;
+  const hairFile   = (la.hairStyle && la.hairStyle !== 'none') ? `hair-${la.hairStyle}.png` : null;
+  const outfitFile = la.outfitStyle ? `outfit-${la.outfitStyle}.png` : null;
+  // Profile panel
+  setLayerImg(document.getElementById('laBody'),   bodyFile);
+  setLayerImg(document.getElementById('laOutfit'), outfitFile);
+  setLayerImg(document.getElementById('laHair'),   hairFile);
+  // Customizer preview
+  setLayerImg(document.getElementById('lpBody'),   bodyFile);
+  setLayerImg(document.getElementById('lpOutfit'), outfitFile);
+  setLayerImg(document.getElementById('lpHair'),   hairFile);
+  // Tile active states
+  document.querySelectorAll('.lp-tile').forEach(t => {
+    const k = t.dataset.key, v = t.dataset.val;
+    t.classList.toggle('active', la[k] === v);
+  });
+}
+
+function buildLayeredPicker() {
+  ensureLayeredDefaults();
+  const wrap = document.getElementById('layeredPickerOptions');
+  if (!wrap) return;
+  const mk = (label, key, vals) => `
+    <div class="layered-picker-row">
+      <label>${label}</label>
+      ${vals.map(v => `<button type="button" class="lp-tile" data-key="${key}" data-val="${v}">${v}</button>`).join('')}
+    </div>`;
+  wrap.innerHTML =
+    mk('Body tone', 'bodyTone',   LAYERED_BODY_TONES) +
+    mk('Hair',      'hairStyle',  LAYERED_HAIR_STYLES) +
+    mk('Outfit',    'outfitStyle', LAYERED_OUTFIT_STYLES);
+  wrap.querySelectorAll('.lp-tile').forEach(t => {
+    t.addEventListener('click', () => {
+      ensureLayeredDefaults();
+      state.avatar.layered[t.dataset.key] = t.dataset.val;
+      renderLayeredAvatar();
+      save();
+      playSound && playSound('click');
+      if (typeof checkAchievement === 'function') checkAchievement('customize');
+    });
+  });
+  renderLayeredAvatar();
 }
 
 // ============================================================
@@ -5742,6 +5908,16 @@ function trade(kind) {
   playSound('complete');
   if (state.settings.fx) burstConfetti();
   checkAchievement('egg_trader');
+  // Ducky cheers on a successful trade
+  const ducky = document.getElementById('marketplaceDucky');
+  if (ducky) {
+    ducky.src = 'assets/ducky-cheer.png';
+    ducky.classList.add('cheer');
+    setTimeout(() => {
+      ducky.classList.remove('cheer');
+      ducky.src = 'assets/ducky-idle.png';
+    }, 1400);
+  }
   save();
   refreshMarketplaceCounts();
   renderStats();
@@ -6157,7 +6333,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v5.3-hud-icons
+// build-marker: v5.4-marketplace-items-avatar
 </script>
 </body>
 </html>
