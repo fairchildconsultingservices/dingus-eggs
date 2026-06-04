@@ -2325,11 +2325,12 @@ function isAssetReady(filename) {
 }
 // Kick off preloads as soon as the script runs.
 preloadAssets([
-  'avatar.png',
-  'bg-hatchery.png',
-  'ducky-idle.png', 'ducky-cheer.png',
-  'egg-stage-1.png', 'egg-stage-2.png', 'egg-stage-3.png',
-  'hatch-burst.png', 'light-ring.png',
+  'avatar.png','avatar-sword-steve.png',
+  'bg-hatchery.png','bg-trophy.png','bg-colosseum.png','bg-garage.png',
+  'door-trophy.png','door-colosseum.png','door-garage.png',
+  'ducky-idle.png','ducky-cheer.png','ducky-market.png',
+  'egg-stage-1.png','egg-stage-2.png','egg-stage-3.png',
+  'hatch-burst.png','light-ring.png',
   'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png',
   'icon-add.png','icon-edit.png','icon-delete.png','icon-settings.png','icon-close.png','icon-undo.png',
   'tab-goals.png','tab-eggs.png','tab-inventory.png'
@@ -4093,9 +4094,9 @@ const wh = {
   stall: { x: 480, y: 110, w: 90, h: 64 },
   nearStall: false,
   // Doors
-  trophyDoor: { x: 8, y: 30, w: 50, h: 50 },     // left side of Hatchery → Trophy Room
-  garageDoor: { x: 542, y: 30, w: 50, h: 50 },   // right side of Hatchery → Garage
-  colosseumDoor: { x: 275, y: 30, w: 50, h: 50 }, // center of Hatchery → Colosseum
+  trophyDoor:    { x:  80, y: 340, w: 50, h: 50 }, // bottom-left  of Hatchery → Trophy Room
+  colosseumDoor: { x: 275, y: 340, w: 50, h: 50 }, // bottom-center of Hatchery → Colosseum
+  garageDoor:    { x: 470, y: 340, w: 50, h: 50 }, // bottom-right of Hatchery → Garage
   hatcheryDoor: { x: 542, y: 30, w: 50, h: 50 }, // return door — position changes per scene
   nearTrophyDoor: false,
   nearGarageDoor: false,
@@ -4160,7 +4161,8 @@ function initWarehouse() {
     // Don't run in simple mode either
     if (state.settings && state.settings.simpleMode) return;
     if (!document.getElementById('tab-warehouse').classList.contains('active')) return;
-    const k = e.key.toLowerCase();
+    const k = (e.key || '').toLowerCase();
+    if (!k) return;
     wh.keys[k] = true;
     if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k) ||
         ['w','a','s','d'].includes(k)) {
@@ -4185,7 +4187,8 @@ function initWarehouse() {
     }
   });
   window.addEventListener('keyup', (e) => {
-    const k = e.key.toLowerCase();
+    const k = (e.key || '').toLowerCase();
+    if (!k) return;
     wh.keys[k] = false;
     if (k === 'e') wh.ePressed = false;
   });
@@ -4246,20 +4249,8 @@ function initWarehouse() {
 }
 
 function buildDecorations() {
-  // Place each non-equipped, non-pet item as a decoration somewhere
+  // Hatchery floor is intentionally clean — inventory items live on the Inventory tab.
   wh.decorations = [];
-  const W = 600, H = 400;
-  let i = 0;
-  state.inventory.forEach(item => {
-    if (item.t === 'pet') return; // pets are handled by equip
-    if (item.t === 'background') return; // background is full-room
-    // Use deterministic pseudo-random based on item id
-    const seed = (typeof item.id === 'string' ? item.id.length : item.id) + i * 17;
-    const x = 60 + ((seed * 73) % (W - 120));
-    const y = 120 + ((seed * 41) % (H - 200));
-    wh.decorations.push({ x, y, item });
-    i++;
-  });
 }
 
 function startWarehouseLoop() {
@@ -4417,7 +4408,7 @@ function drawWarehouse() {
       // Static avatar image (fallback to chibi if image not yet loaded)
       if (isAssetReady('avatar.png')) {
         const aImg = getAsset('avatar.png');
-        const ah = 90;
+        const ah = 108; // bumped 20% for less grain at canvas scale
         const aw = ah * (aImg.naturalWidth / aImg.naturalHeight);
         ctx.drawImage(aImg, state.warehouseAvatarPos.x - aw/2, state.warehouseAvatarPos.y + 32 - ah, aw, ah);
       } else {
@@ -4608,14 +4599,27 @@ function updateWarehouseStatus() {
 }
 
 function drawMarketplaceStall(ctx, s) {
-  // Awning (gold-striped)
+  if (isAssetReady('ducky-market.png')) {
+    // Render Ducky a bit larger than the click hitbox so the character has visual presence.
+    const img = getAsset('ducky-market.png');
+    const renderH = 140;
+    const renderW = renderH * (img.naturalWidth / img.naturalHeight);
+    const renderX = s.x + s.w/2 - renderW/2;
+    const renderY = s.y + s.h - renderH + 10; // anchor bottom near the stall's base
+    if (wh.nearStall) {
+      ctx.fillStyle = 'rgba(255,215,0,0.22)';
+      ctx.fillRect(renderX - 6, renderY - 6, renderW + 12, renderH + 12);
+    }
+    ctx.drawImage(img, renderX, renderY, renderW, renderH);
+    return;
+  }
+  // Procedural fallback
   ctx.fillStyle = '#ffd700';
   ctx.fillRect(s.x - 4, s.y - 12, s.w + 8, 12);
   ctx.fillStyle = '#c79100';
   for (let i = 0; i < s.w + 8; i += 10) {
     ctx.fillRect(s.x - 4 + i, s.y - 12, 5, 12);
   }
-  // Awning frill
   ctx.fillStyle = '#ffd700';
   for (let i = 0; i < s.w + 8; i += 8) {
     ctx.beginPath();
@@ -4624,19 +4628,14 @@ function drawMarketplaceStall(ctx, s) {
     ctx.lineTo(s.x - 4 + i + 8, s.y);
     ctx.fill();
   }
-
-  // Counter base (wood)
   ctx.fillStyle = '#5d3a1a';
   ctx.fillRect(s.x, s.y + 24, s.w, s.h - 24);
   ctx.fillStyle = '#8b5a3c';
-  ctx.fillRect(s.x, s.y + 24, s.w, 4); // counter top
-  // Wood grain
+  ctx.fillRect(s.x, s.y + 24, s.w, 4);
   ctx.fillStyle = '#3a2410';
   for (let i = 0; i < s.w; i += 8) {
     ctx.fillRect(s.x + i, s.y + 30, 1, s.h - 30);
   }
-
-  // Sign
   ctx.fillStyle = '#2c1810';
   ctx.fillRect(s.x + 4, s.y + 4, s.w - 8, 18);
   ctx.fillStyle = '#ffd700';
@@ -4644,18 +4643,12 @@ function drawMarketplaceStall(ctx, s) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('EGG MARKET', s.x + s.w / 2, s.y + 13);
-
-  // Eggs displayed on the counter
   ctx.font = '14px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
   ctx.fillText('🥚', s.x + 18, s.y + 36);
   ctx.font = '18px serif';
   ctx.fillText('🥚', s.x + s.w/2, s.y + 38);
   ctx.font = '22px serif';
   ctx.fillText('🥚', s.x + s.w - 18, s.y + 40);
-
-  // Glow if near (drawn before avatar pass)
   if (wh.nearStall) {
     ctx.fillStyle = 'rgba(255,215,0,0.18)';
     ctx.fillRect(s.x - 8, s.y - 14, s.w + 16, s.h + 14);
@@ -4678,22 +4671,26 @@ function drawDoorPrompt(ctx, cx, cy) {
 }
 
 function drawTrophyDoor(ctx, d) {
-  // Door frame (stone-arched entry)
+  if (isAssetReady('door-trophy.png')) {
+    if (wh.nearTrophyDoor) {
+      ctx.fillStyle = 'rgba(255,215,0,0.25)';
+      ctx.fillRect(d.x - 10, d.y - 12, d.w + 20, d.h + 18);
+    }
+    ctx.drawImage(getAsset('door-trophy.png'), d.x - 8, d.y - 10, d.w + 16, d.h + 16);
+    return;
+  }
+  // Procedural fallback
   ctx.fillStyle = '#3a2410';
   ctx.fillRect(d.x - 4, d.y - 6, d.w + 8, d.h + 6);
-  // Door
   ctx.fillStyle = '#5d3a1a';
   ctx.fillRect(d.x, d.y, d.w, d.h);
-  // Door panels
   ctx.fillStyle = '#3a2410';
   ctx.fillRect(d.x + 4, d.y + 4, d.w - 8, (d.h - 12) / 2);
   ctx.fillRect(d.x + 4, d.y + d.h/2 + 4, d.w - 8, (d.h - 12) / 2);
-  // Knob
   ctx.fillStyle = '#ffd700';
   ctx.beginPath();
   ctx.arc(d.x + d.w - 8, d.y + d.h/2, 2, 0, Math.PI*2);
   ctx.fill();
-  // Sign above the door
   ctx.fillStyle = '#2c1810';
   ctx.fillRect(d.x - 8, d.y - 18, d.w + 16, 14);
   ctx.fillStyle = '#ffd700';
@@ -4701,7 +4698,6 @@ function drawTrophyDoor(ctx, d) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('🏆 TROPHIES', d.x + d.w/2, d.y - 11);
-  // Glow if near
   if (wh.nearTrophyDoor) {
     ctx.fillStyle = 'rgba(255,215,0,0.18)';
     ctx.fillRect(d.x - 8, d.y - 22, d.w + 16, d.h + 26);
@@ -4732,6 +4728,25 @@ function drawHatcheryDoor(ctx, d) {
     ctx.fillStyle = 'rgba(255,215,0,0.18)';
     ctx.fillRect(d.x - 8, d.y - 22, d.w + 16, d.h + 26);
   }
+}
+
+// Helper: paint an asset as a cover-fit full background on the warehouse canvas.
+// Used by each scene's draw function to overlay the procedural background with art.
+function paintSceneBg(ctx, fileName, W, H) {
+  if (!isAssetReady(fileName)) return false;
+  const img = getAsset(fileName);
+  const ir = img.naturalWidth / img.naturalHeight;
+  const cr = W / H;
+  let sw, sh, sx, sy;
+  if (ir > cr) {
+    sh = img.naturalHeight; sw = sh * cr;
+    sx = (img.naturalWidth - sw) / 2; sy = 0;
+  } else {
+    sw = img.naturalWidth; sh = sw / cr;
+    sx = 0; sy = (img.naturalHeight - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+  return true;
 }
 
 function drawTrophyRoom(ctx, W, H) {
@@ -4777,7 +4792,10 @@ function drawTrophyRoom(ctx, W, H) {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 78, W, 4);
 
-  // Title sign
+  // Overlay illustrated background if asset is loaded — covers the procedural paint above.
+  paintSceneBg(ctx, 'bg-trophy.png', W, H);
+
+  // Title sign (drawn on top of bg so it stays readable)
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.fillRect(W/2 - 80, 8, 160, 22);
   ctx.fillStyle = '#ffd700';
@@ -4956,25 +4974,28 @@ function enterHatchery() {
 }
 
 function drawGarageDoor(ctx, d) {
-  // Industrial garage door (rolled up door) with metal panels
+  if (isAssetReady('door-garage.png')) {
+    if (wh.nearGarageDoor) {
+      ctx.fillStyle = 'rgba(255,215,0,0.25)';
+      ctx.fillRect(d.x - 10, d.y - 12, d.w + 20, d.h + 18);
+    }
+    ctx.drawImage(getAsset('door-garage.png'), d.x - 8, d.y - 10, d.w + 16, d.h + 16);
+    return;
+  }
+  // Procedural fallback
   ctx.fillStyle = '#222';
   ctx.fillRect(d.x - 4, d.y - 6, d.w + 8, d.h + 6);
-  // Door body
   ctx.fillStyle = '#888';
   ctx.fillRect(d.x, d.y, d.w, d.h);
-  // Horizontal panel lines (rolled garage door)
   ctx.fillStyle = '#555';
   for (let i = 0; i < d.h; i += 8) {
     ctx.fillRect(d.x, d.y + i, d.w, 1);
   }
-  // Side rails
   ctx.fillStyle = '#444';
   ctx.fillRect(d.x, d.y, 2, d.h);
   ctx.fillRect(d.x + d.w - 2, d.y, 2, d.h);
-  // Handle
   ctx.fillStyle = '#ffd700';
   ctx.fillRect(d.x + d.w/2 - 5, d.y + d.h - 8, 10, 2);
-  // Sign
   ctx.fillStyle = '#2c1810';
   ctx.fillRect(d.x - 8, d.y - 18, d.w + 16, 14);
   ctx.fillStyle = '#ffd700';
@@ -5030,6 +5051,20 @@ function drawGarage(ctx, W, H) {
   ctx.font = 'bold 14px Courier New';
   ctx.textBaseline = 'middle';
   ctx.fillText('🔧 THE GARAGE 🔧', W/2, 19);
+
+  // Overlay illustrated background if asset is loaded
+  paintSceneBg(ctx, 'bg-garage.png', W, H);
+
+  // Re-paint title on top of bg so it stays readable
+  if (isAssetReady('bg-garage.png')) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(W/2 - 80, 8, 160, 22);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔧 THE GARAGE 🔧', W/2, 19);
+  }
 
   // Hatchery return door (left side)
   drawHatcheryDoor(ctx, wh.hatcheryDoor);
@@ -5172,13 +5207,19 @@ function drawLift(ctx, x, y, item) {
 }
 
 function drawColosseumDoor(ctx, d) {
-  // Stone arched door (gladiator entrance)
+  if (isAssetReady('door-colosseum.png')) {
+    if (wh.nearColosseumDoor) {
+      ctx.fillStyle = 'rgba(255,215,0,0.25)';
+      ctx.fillRect(d.x - 12, d.y - 14, d.w + 24, d.h + 20);
+    }
+    ctx.drawImage(getAsset('door-colosseum.png'), d.x - 10, d.y - 12, d.w + 20, d.h + 18);
+    return;
+  }
+  // Procedural fallback
   ctx.fillStyle = '#1a1a1a';
   ctx.fillRect(d.x - 4, d.y - 8, d.w + 8, d.h + 8);
-  // Stone arch
   ctx.fillStyle = '#7a7a82';
   ctx.fillRect(d.x, d.y, d.w, d.h);
-  // Stone block pattern
   ctx.fillStyle = '#5a5a62';
   for (let i = 0; i < d.h; i += 10) {
     for (let j = 0; j < d.w; j += 12) {
@@ -5186,12 +5227,10 @@ function drawColosseumDoor(ctx, d) {
       ctx.fillRect(d.x + j, d.y + i, 12, 1);
     }
   }
-  // Crossed swords above
   ctx.font = '14px serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('⚔️', d.x + d.w/2, d.y + d.h/2);
-  // Sign
   ctx.fillStyle = '#2c1810';
   ctx.fillRect(d.x - 12, d.y - 18, d.w + 24, 14);
   ctx.fillStyle = '#ffd700';
@@ -5251,6 +5290,20 @@ function drawColosseum(ctx, W, H) {
   ctx.textBaseline = 'middle';
   ctx.fillText('⚔️ THE COLOSSEUM ⚔️', W/2, 19);
 
+  // Overlay illustrated background if asset is loaded
+  paintSceneBg(ctx, 'bg-colosseum.png', W, H);
+
+  // Re-paint title on top of bg so it stays readable
+  if (isAssetReady('bg-colosseum.png')) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(W/2 - 90, 8, 180, 22);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚔️ THE COLOSSEUM ⚔️', W/2, 19);
+  }
+
   // Hatchery return door (right)
   drawHatcheryDoor(ctx, wh.hatcheryDoor);
 
@@ -5268,7 +5321,14 @@ function drawColosseum(ctx, W, H) {
       ctx.beginPath();
       ctx.ellipse(stevePos.x, stevePos.y + 30, 18, 5, 0, 0, Math.PI*2);
       ctx.fill();
-      drawChibi(ctx, stevePos.x, stevePos.y + 32, 2, SWORD_STEVE.avatar, {});
+      if (isAssetReady('avatar-sword-steve.png')) {
+        const sImg = getAsset('avatar-sword-steve.png');
+        const sh = 108;
+        const sw = sh * (sImg.naturalWidth / sImg.naturalHeight);
+        ctx.drawImage(sImg, stevePos.x - sw/2, stevePos.y + 32 - sh, sw, sh);
+      } else {
+        drawChibi(ctx, stevePos.x, stevePos.y + 32, 2, SWORD_STEVE.avatar, {});
+      }
       // Steve's name above his head
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
       ctx.fillRect(stevePos.x - 38, stevePos.y - 90, 76, 14);
@@ -6409,7 +6469,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v6.3-full-reset
+// build-marker: v7-room-backgrounds-doors-steve
 </script>
 </body>
 </html>
