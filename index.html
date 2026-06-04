@@ -578,6 +578,9 @@
   .modal h2 { color: var(--gold); margin-bottom: 10px; }
   .modal h3 { color: var(--gold-soft); margin: 12px 0 8px; }
   .modal .reveal-emoji { font-size: 5em; margin: 15px 0; display: inline-flex; align-items: center; justify-content: center; }
+  /* HUD inline icons */
+  .btn-icon { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; display: inline-block; }
+  .tab-icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 5px; display: inline-block; object-fit: contain; }
   .hatching { animation: shake 0.4s infinite; }
   @keyframes shake {
     0%, 100% { transform: rotate(0); }
@@ -1335,13 +1338,13 @@
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" data-tab="goals">📋 Goals</button>
-    <button class="tab" data-tab="eggs">🥚 Eggs</button>
-    <button class="tab" data-tab="inventory">🎒 Inventory</button>
+    <button class="tab active" data-tab="goals"><img src="assets/tab-goals.png" class="tab-icon" alt="">Goals</button>
+    <button class="tab" data-tab="eggs"><img src="assets/tab-eggs.png" class="tab-icon" alt="">Eggs</button>
+    <button class="tab" data-tab="inventory"><img src="assets/tab-inventory.png" class="tab-icon" alt="">Inventory</button>
     <button class="tab" data-tab="warehouse">🏠 The Hatchery</button>
     <button class="tab" data-tab="stats">📊 Stats</button>
     <button class="tab" data-tab="achievements">🏆 Achievements</button>
-    <button class="tab" data-tab="settings">⚙️ Settings</button>
+    <button class="tab" data-tab="settings"><img src="assets/icon-settings.png" class="tab-icon" alt="">Settings</button>
   </div>
 
   <!-- GOALS TAB -->
@@ -1381,7 +1384,7 @@
           <button class="small secondary" onclick="addSubgoalInput()">+ Add Sub-goal</button>
         </div>
         <div style="margin-top: 12px; display:flex; gap:8px;">
-          <button onclick="saveGoal()" id="saveGoalBtn">Add Goal</button>
+          <button onclick="saveGoal()" id="saveGoalBtn"><img src="assets/icon-add.png" class="btn-icon" alt="">Add Goal</button>
           <button class="secondary" onclick="cancelEdit()" id="cancelEditBtn" style="display:none;">Cancel</button>
         </div>
       </div>
@@ -1529,7 +1532,7 @@
           <div style="color:var(--red);">Reset everything</div>
           <div style="font-size:0.75em; color:var(--text-dim);">Wipe all goals, eggs, items, achievements. Cannot be undone.</div>
         </div>
-        <button class="danger" onclick="resetAll()">🗑️ Reset</button>
+        <button class="danger" onclick="resetAll()"><img src="assets/icon-delete.png" class="btn-icon" alt="">Reset</button>
       </div>
       <div class="settings-row">
         <div>
@@ -2237,7 +2240,9 @@ preloadAssets([
   'ducky-idle.png', 'ducky-cheer.png',
   'egg-stage-1.png', 'egg-stage-2.png', 'egg-stage-3.png',
   'hatch-burst.png', 'light-ring.png',
-  'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png'
+  'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png',
+  'icon-add.png','icon-edit.png','icon-delete.png','icon-settings.png','icon-close.png','icon-undo.png',
+  'tab-goals.png','tab-eggs.png','tab-inventory.png'
 ]);
 
 // ============================================================
@@ -3436,9 +3441,9 @@ function renderGoals() {
         ` : ''}
         <div class="goal-actions">
           ${!isDone ? `<button class="small success" onclick="completeGoal(${g.id})">✓ Complete${g.type === 'daily' ? ' Today' : ''}</button>` : `<span style="color:var(--green); font-size:0.85em;">✓ ${g.type === 'daily' ? 'Done today' : 'Completed'}</span>`}
-          <button class="small secondary" onclick="editGoal(${g.id})">✏️ Edit</button>
+          <button class="small secondary" onclick="editGoal(${g.id})"><img src="assets/icon-edit.png" class="btn-icon" alt="">Edit</button>
           <button class="small secondary" onclick="duplicateGoal(${g.id})">📋 Duplicate</button>
-          <button class="small danger" onclick="deleteGoal(${g.id})">🗑 Delete</button>
+          <button class="small danger" onclick="deleteGoal(${g.id})"><img src="assets/icon-delete.png" class="btn-icon" alt="">Delete</button>
         </div>
       </div>
     `;
@@ -6152,7 +6157,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v5.2-hatch-modal-art
+// build-marker: v5.3-hud-icons
 </script>
 </body>
 </html>
