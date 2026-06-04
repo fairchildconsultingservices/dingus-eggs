@@ -4166,7 +4166,23 @@ function drawWarehouse() {
 function drawWarehouseBackground(ctx, W, H) {
   // Use the illustrated hatchery background when no themed background is equipped.
   if (!state.equipped.background && isAssetReady('bg-hatchery.png')) {
-    ctx.drawImage(getAsset('bg-hatchery.png'), 0, 0, W, H);
+    const img = getAsset('bg-hatchery.png');
+    // "Cover" — fill the canvas while preserving the image's aspect ratio, center-crop any overflow.
+    const ir = img.naturalWidth / img.naturalHeight;
+    const cr = W / H;
+    let sw, sh, sx, sy;
+    if (ir > cr) {
+      sh = img.naturalHeight;
+      sw = sh * cr;
+      sx = (img.naturalWidth - sw) / 2;
+      sy = 0;
+    } else {
+      sw = img.naturalWidth;
+      sh = sw / cr;
+      sx = 0;
+      sy = (img.naturalHeight - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
     return;
   }
   // Background image based on equipped, otherwise default
@@ -6020,7 +6036,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v5-assets-bg-hatchery
+// build-marker: v5.1-bg-cover-fit
 </script>
 </body>
 </html>
