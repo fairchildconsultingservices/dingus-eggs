@@ -1962,6 +1962,18 @@ const ITEMS = {
   ]
 };
 
+// Strip the loot pool down to items that have a real PNG asset.
+// Items without an `img` field are excluded from future hatches.
+// (Existing inventory items keep their emoji rendering — only the roll pool shrinks.)
+Object.keys(ITEMS).forEach(rarity => {
+  const filtered = ITEMS[rarity].filter(item => item.img);
+  if (filtered.length > 0) {
+    ITEMS[rarity] = filtered;
+  } else {
+    console.warn(`No items with img in tier "${rarity}" — keeping originals to avoid empty pool.`);
+  }
+});
+
 const DROP_RATES = {
   small: { common: 0.70, uncommon: 0.25, rare: 0.05, epic: 0, legendary: 0, mythic: 0 },
   big:   { common: 0.20, uncommon: 0.40, rare: 0.30, epic: 0.09, legendary: 0.01, mythic: 0 },
@@ -6378,7 +6390,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v6.1-main-background
+// build-marker: v6.2-curated-loot-pool
 </script>
 </body>
 </html>
