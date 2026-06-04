@@ -584,21 +584,19 @@
   /* Layered avatar (paper-doll) */
   .layered-avatar {
     position: relative;
-    width: 160px;
-    height: 240px;
+    width: 180px;
+    height: 260px;
     margin: 0 auto;
   }
   .layered-avatar .la-layer {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
     object-fit: contain;
     pointer-events: none;
   }
-  .layered-avatar .la-body  { z-index: 1; }
-  .layered-avatar .la-outfit{ z-index: 2; }
-  .layered-avatar .la-hair  { z-index: 3; }
+  /* Tight-cropped PNGs need per-layer placement so the head/torso/hair line up roughly. */
+  .layered-avatar .la-body   { z-index: 1; top: 0;   left: 0;   width: 100%; height: 100%; }
+  .layered-avatar .la-outfit { z-index: 2; top: 30%; left: 14%; width: 72%;  height: 56%; }
+  .layered-avatar .la-hair   { z-index: 3; top: 2%;  left: 22%; width: 56%;  height: 28%; }
   /* Layered avatar pickers in customizer */
   .layered-picker {
     margin: 14px 0;
@@ -630,11 +628,13 @@
     margin: 0 auto;
   }
   .lp-preview .la-layer {
-    position: absolute; top: 0; left: 0;
-    width: 100%; height: 100%;
+    position: absolute;
     object-fit: contain;
     pointer-events: none;
   }
+  .lp-preview .la-body   { z-index: 1; top: 0;   left: 0;   width: 100%; height: 100%; }
+  .lp-preview .la-outfit { z-index: 2; top: 30%; left: 14%; width: 72%;  height: 56%; }
+  .lp-preview .la-hair   { z-index: 3; top: 2%;  left: 22%; width: 56%;  height: 28%; }
   /* Marketplace shopkeeper */
   .marketplace-header { display: flex; align-items: center; gap: 14px; text-align: left; margin-bottom: 14px; }
   .marketplace-ducky { width: 110px; height: 110px; object-fit: contain; flex-shrink: 0; transition: transform 0.25s ease; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35)); }
@@ -6333,7 +6333,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v5.4-marketplace-items-avatar
+// build-marker: v5.5-layered-avatar-positioning
 </script>
 </body>
 </html>
