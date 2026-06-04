@@ -581,6 +581,16 @@
   /* HUD inline icons */
   .btn-icon { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; display: inline-block; }
   .tab-icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 5px; display: inline-block; object-fit: contain; }
+  /* Static profile avatar */
+  .profile-avatar {
+    display: block;
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+    margin: 0 auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+  }
   /* Layered avatar (paper-doll) */
   .layered-avatar {
     position: relative;
@@ -1357,11 +1367,7 @@
       <div class="avatar-display">
         <div class="avatar-frame" id="avatarFrame">
           <canvas id="avatarCanvas" width="64" height="64" style="display:none;"></canvas>
-          <div class="layered-avatar" id="layeredAvatar">
-            <img class="la-layer la-body" id="laBody" src="assets/base-body-light.png" alt="">
-            <img class="la-layer la-outfit" id="laOutfit" src="assets/outfit-tee.png" alt="">
-            <img class="la-layer la-hair" id="laHair" src="assets/hair-messy.png" alt="">
-          </div>
+          <img class="profile-avatar" id="profileAvatar" src="assets/avatar.png" alt="Your avatar">
         </div>
         <div style="width:100%;">
           <div style="display:flex; justify-content:space-between; font-size:0.8em; color:var(--text-dim); margin-bottom:2px;">
@@ -1370,7 +1376,6 @@
           </div>
           <div class="level-bar"><div class="level-bar-fill" id="xpFill" style="width:0%;"></div><div class="level-bar-text" id="xpText">0 / 100</div></div>
         </div>
-        <button class="avatar-customize-btn" onclick="openCustomizer()">🎨 Customize Avatar</button>
       </div>
     </div>
 
@@ -1584,6 +1589,20 @@
       </div>
       <div class="settings-row">
         <div>
+          <div>Show old completed goals</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">By default, goals you completed on previous days are hidden — flip this on to see the full backlog.</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="backlogToggle"><span class="slider"></span></label>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div>Export goal backlog</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">Download a JSON file of every completed goal grouped by the day you finished it.</div>
+        </div>
+        <button class="secondary" onclick="exportBacklog()">📤 Export backlog</button>
+      </div>
+      <div class="settings-row">
+        <div>
           <div>Export save data</div>
           <div style="font-size:0.75em; color:var(--text-dim);">Download a JSON backup of your progress</div>
         </div>
@@ -1649,44 +1668,7 @@
   </div>
 </div>
 
-<!-- AVATAR CUSTOMIZER MODAL -->
-<div class="modal-overlay" id="customizerModal">
-  <div class="modal wide">
-    <h2>Design Your Avatar</h2>
-
-    <!-- Layered avatar (new look) -->
-    <div class="layered-picker">
-      <h4>🎨 Layered Style</h4>
-      <div style="display:grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start;">
-        <div class="lp-preview">
-          <img class="la-layer la-body"   id="lpBody"   src="" alt="">
-          <img class="la-layer la-outfit" id="lpOutfit" src="" alt="">
-          <img class="la-layer la-hair"   id="lpHair"   src="" alt="">
-        </div>
-        <div id="layeredPickerOptions"></div>
-      </div>
-    </div>
-
-    <hr style="border-color: var(--border); margin: 16px 0;">
-
-    <h4 style="color:var(--text-dim); margin: 0 0 10px;">🧱 Classic pixel avatar (legacy)</h4>
-    <div class="customizer">
-      <div>
-        <canvas id="customizerCanvas" width="64" height="64"></canvas>
-        <div style="margin-top: 10px;">
-          <label style="font-size:0.8em; color:var(--text-dim);">Name</label>
-          <input type="text" id="customAvatarName" placeholder="Your hero" maxlength="20"
-                 style="width:100%; padding:5px; background:var(--bg-2); color:var(--text); border:1px solid #555; border-radius:3px; font-family:inherit;">
-        </div>
-      </div>
-      <div class="customizer-options" id="customizerOptions"></div>
-    </div>
-    <div style="margin-top: 18px; display:flex; gap:8px; justify-content:center;">
-      <button onclick="randomizeAvatar()" class="secondary">🎲 Randomize</button>
-      <button onclick="closeCustomizer()">Save</button>
-    </div>
-  </div>
-</div>
+<!-- Avatar customizer removed — game now uses a static avatar.png -->
 
 <!-- ONBOARDING MODAL -->
 <div class="modal-overlay" id="onboardingModal">
@@ -2328,17 +2310,14 @@ function isAssetReady(filename) {
 }
 // Kick off preloads as soon as the script runs.
 preloadAssets([
+  'avatar.png',
   'bg-hatchery.png',
   'ducky-idle.png', 'ducky-cheer.png',
   'egg-stage-1.png', 'egg-stage-2.png', 'egg-stage-3.png',
   'hatch-burst.png', 'light-ring.png',
   'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png',
   'icon-add.png','icon-edit.png','icon-delete.png','icon-settings.png','icon-close.png','icon-undo.png',
-  'tab-goals.png','tab-eggs.png','tab-inventory.png',
-  // Layered avatar
-  'base-body-pale.png','base-body-light.png','base-body-tan.png','base-body-deep.png',
-  'hair-messy.png','hair-long.png','hair-afro.png','hair-mohawk.png',
-  'outfit-tee.png','outfit-hoodie.png','outfit-overalls.png','outfit-dress.png','outfit-suit.png','outfit-superhero.png'
+  'tab-goals.png','tab-eggs.png','tab-inventory.png'
 ]);
 
 // ============================================================
@@ -3432,6 +3411,7 @@ function completeGoal(goalId) {
     if (goal.completed) return;
     lastCompleted = { goalId, prevCompleted: goal.completed, type: 'onetime', size: goal.size, category: goal.category };
     goal.completed = true;
+    goal.completedDate = dateKey; // Track when it was completed so we can hide stale ones
   }
 
   const reward = getRewardFor(goal.size);
@@ -3554,9 +3534,14 @@ function renderGoals() {
   const fs = document.getElementById('filterStatus').value;
   const sb = document.getElementById('sortBy').value;
   const today = new Date().toDateString();
+  const todayK = todayKey();
   if (fc) goals = goals.filter(g => g.category === fc);
   if (fs === 'open') goals = goals.filter(g => !g.completed && !(g.type === 'daily' && g.lastCompletedDate === today));
   if (fs === 'done') goals = goals.filter(g => g.completed || (g.type === 'daily' && g.lastCompletedDate === today));
+  // Hide one-time goals completed on a previous day unless user toggled the backlog on
+  if (!state.settings.showBacklog) {
+    goals = goals.filter(g => !(g.completed && g.completedDate && g.completedDate !== todayK));
+  }
 
   // Sort
   if (sb === 'priority') {
@@ -4414,8 +4399,15 @@ function drawWarehouse() {
       ctx.beginPath();
       ctx.ellipse(state.warehouseAvatarPos.x, state.warehouseAvatarPos.y + 30, 18, 5, 0, 0, Math.PI*2);
       ctx.fill();
-      // chibi avatar at scale 2
-      drawChibi(ctx, state.warehouseAvatarPos.x, state.warehouseAvatarPos.y + 32, 2, state.avatar, { equipped: state.equipped });
+      // Static avatar image (fallback to chibi if image not yet loaded)
+      if (isAssetReady('avatar.png')) {
+        const aImg = getAsset('avatar.png');
+        const ah = 90;
+        const aw = ah * (aImg.naturalWidth / aImg.naturalHeight);
+        ctx.drawImage(aImg, state.warehouseAvatarPos.x - aw/2, state.warehouseAvatarPos.y + 32 - ah, aw, ah);
+      } else {
+        drawChibi(ctx, state.warehouseAvatarPos.x, state.warehouseAvatarPos.y + 32, 2, state.avatar, { equipped: state.equipped });
+      }
     } else if (it.type === 'pet') {
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.beginPath();
@@ -6117,6 +6109,36 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ============================================================
 // SETTINGS / EXPORT / IMPORT / RESET
 // ============================================================
+function exportBacklog() {
+  // Build a date-keyed map of every completed goal
+  const byDate = {};
+  (state.goals || []).forEach(g => {
+    if (g.completed && g.completedDate) {
+      (byDate[g.completedDate] = byDate[g.completedDate] || []).push({
+        title: g.title,
+        type: g.type,
+        category: g.category,
+        priority: g.priority,
+        size: g.size,
+        subgoals: (g.subgoals || []).map(s => ({ text: s.text, done: !!s.done }))
+      });
+    }
+  });
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    completedByDate: byDate,
+    totalCompleted: Object.values(byDate).reduce((n, arr) => n + arr.length, 0)
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dingus-eggs-backlog-${todayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Backlog exported — ${payload.totalCompleted} completed goals.`);
+}
+
 function exportData() {
   const dataStr = JSON.stringify(state, null, 2);
   const blob = new Blob([dataStr], { type: 'application/json' });
@@ -6170,6 +6192,12 @@ document.getElementById('fxToggle').addEventListener('change', (e) => {
   state.settings.fx = e.target.checked;
   save();
 });
+document.getElementById('backlogToggle').addEventListener('change', (e) => {
+  state.settings.showBacklog = e.target.checked;
+  save();
+  renderGoals();
+  if (state.settings.simpleMode && typeof renderSimpleGoals === 'function') renderSimpleGoals();
+});
 
 // ============================================================
 // SUPER DUPER SIMPLE MODE
@@ -6210,8 +6238,18 @@ function renderSimpleGoals() {
     return;
   }
   const today = new Date().toDateString();
+  const todayK = todayKey();
+  // Hide one-time goals completed on a previous day unless the user wants the backlog
+  let pool = state.goals;
+  if (!state.settings.showBacklog) {
+    pool = pool.filter(g => !(g.completed && g.completedDate && g.completedDate !== todayK));
+  }
+  if (pool.length === 0) {
+    list.innerHTML = '<div class="pad-empty">~ no goals for today ~<br>jot one down below</div>';
+    return;
+  }
   // Sort: open first, then completed
-  const sorted = [...state.goals].sort((a, b) => {
+  const sorted = [...pool].sort((a, b) => {
     const aDone = a.completed || (a.type === 'daily' && a.lastCompletedDate === today);
     const bDone = b.completed || (b.type === 'daily' && b.lastCompletedDate === today);
     if (aDone !== bDone) return aDone ? 1 : -1;
@@ -6306,6 +6344,10 @@ load();
 recalculateLevel();
 document.getElementById('soundToggle').checked = state.settings.sound;
 document.getElementById('fxToggle').checked = state.settings.fx;
+{
+  const bt = document.getElementById('backlogToggle');
+  if (bt) bt.checked = !!state.settings.showBacklog;
+}
 updateAvatarNameDisplay();
 drawAvatar();
 renderStats();
@@ -6333,7 +6375,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v5.5-layered-avatar-positioning
+// build-marker: v6-static-avatar-and-backlog
 </script>
 </body>
 </html>
