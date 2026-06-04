@@ -30,11 +30,14 @@
   }
   body {
     font-family: 'Courier New', monospace;
+    /* Layered: dark overlay → main background image → procedural gradient fallback */
     background:
+      linear-gradient(rgba(15, 18, 35, 0.55), rgba(15, 18, 35, 0.55)),
+      url('assets/mainbackground.png') center center / cover no-repeat fixed,
       radial-gradient(ellipse at top left, rgba(255,215,0,0.08), transparent 50%),
       radial-gradient(ellipse at bottom right, rgba(232,67,147,0.08), transparent 50%),
       linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 50%, var(--bg-3) 100%);
-    background-attachment: fixed;
+    background-attachment: fixed, fixed, fixed, fixed, fixed;
     color: var(--text);
     min-height: 100vh;
     image-rendering: pixelated;
@@ -6375,7 +6378,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v6-static-avatar-and-backlog
+// build-marker: v6.1-main-background
 </script>
 </body>
 </html>
