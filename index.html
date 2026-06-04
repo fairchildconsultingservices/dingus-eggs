@@ -577,13 +577,67 @@
   .modal.wide { max-width: 700px; }
   .modal h2 { color: var(--gold); margin-bottom: 10px; }
   .modal h3 { color: var(--gold-soft); margin: 12px 0 8px; }
-  .modal .reveal-emoji { font-size: 5em; margin: 15px 0; display: inline-block; }
+  .modal .reveal-emoji { font-size: 5em; margin: 15px 0; display: inline-flex; align-items: center; justify-content: center; }
   .hatching { animation: shake 0.4s infinite; }
   @keyframes shake {
     0%, 100% { transform: rotate(0); }
     25% { transform: rotate(-15deg); }
     75% { transform: rotate(15deg); }
   }
+  /* Hatch stage — layered aura, burst, and egg/item */
+  .hatch-stage {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 12px auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hatch-aura {
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease, transform 0.6s ease;
+    z-index: 1;
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.4));
+  }
+  .hatch-aura.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    animation: hatch-aura-spin 8s linear infinite;
+  }
+  @keyframes hatch-aura-spin {
+    from { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    to   { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
+  }
+  .hatch-burst {
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    pointer-events: none;
+    opacity: 0;
+    z-index: 3;
+  }
+  .hatch-burst.show {
+    animation: hatch-burst-pop 0.7s ease-out forwards;
+  }
+  @keyframes hatch-burst-pop {
+    0%   { transform: translate(-50%, -50%) scale(0);    opacity: 0; }
+    30%  { transform: translate(-50%, -50%) scale(1.1);  opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.6);  opacity: 0; }
+  }
+  .hatch-stage .reveal-emoji { position: relative; z-index: 2; }
+  .modal-egg-img { width: 180px; height: 180px; object-fit: contain; }
+  .modal-item-img { width: 200px; height: 200px; object-fit: contain; }
   .empty-state { text-align: center; padding: 30px; color: #777; }
   .toast {
     position: fixed;
@@ -1508,7 +1562,11 @@
 <div class="modal-overlay" id="hatchModal">
   <div class="modal">
     <h2 id="hatchTitle">Hatching...</h2>
-    <div class="reveal-emoji hatching" id="hatchEmoji">🥚</div>
+    <div class="hatch-stage" id="hatchStage">
+      <img class="hatch-aura" id="hatchAura" alt="">
+      <img class="hatch-burst" id="hatchBurst" alt="">
+      <div class="reveal-emoji hatching" id="hatchEmoji">🥚</div>
+    </div>
     <div id="hatchResult" style="display:none;">
       <div class="item-rarity" id="hatchRarity"></div>
       <h3 id="hatchName"></h3>
@@ -3462,15 +3520,69 @@ function showHatch(item, size) {
   const emoji = document.getElementById('hatchEmoji');
   const result = document.getElementById('hatchResult');
   const title = document.getElementById('hatchTitle');
-  emoji.innerHTML = eggSvg(size, 'modal-egg');
+  const aura  = document.getElementById('hatchAura');
+  const burst = document.getElementById('hatchBurst');
+
+  // Reset layered effects
+  if (aura)  { aura.classList.remove('show');  aura.removeAttribute('src'); }
+  if (burst) { burst.classList.remove('show'); burst.removeAttribute('src'); }
+
+  // Helper to render a stage. Uses real PNG if loaded, otherwise falls back to the existing SVG egg.
+  const renderEgg = (stageFile, fallbackFn) => {
+    if (isAssetReady(stageFile)) {
+      emoji.innerHTML = `<img src="${ASSET_PATH}${stageFile}" class="modal-egg-img" alt="">`;
+    } else {
+      emoji.innerHTML = fallbackFn();
+    }
+  };
+
+  // Stage 1 — full egg
+  renderEgg('egg-stage-1.png', () => eggSvg(size, 'modal-egg'));
   emoji.classList.add('hatching');
   title.textContent = `${size.charAt(0).toUpperCase() + size.slice(1)} Egg Hatching...`;
   result.style.display = 'none';
   modal.classList.add('show');
 
+  // Stage 2 — first crack
   setTimeout(() => {
+    if (!modal.classList.contains('show')) return;
+    renderEgg('egg-stage-2.png', () => eggSvg(size, 'modal-egg'));
+  }, 600);
+
+  // Stage 3 — burst of light from the shell
+  setTimeout(() => {
+    if (!modal.classList.contains('show')) return;
+    renderEgg('egg-stage-3.png', () => eggSvg(size, 'modal-egg'));
+  }, 1150);
+
+  // Reveal — show aura, burst overlay, and the item itself
+  setTimeout(() => {
+    if (!modal.classList.contains('show')) return;
     emoji.classList.remove('hatching');
-    emoji.innerHTML = item.svgKey ? accessorySvg(item.svgKey, 'modal-large') : item.e;
+
+    // Rarity aura backdrop
+    const auraFile = `aura-${item.rarity}.png`;
+    if (aura && isAssetReady(auraFile)) {
+      aura.src = ASSET_PATH + auraFile;
+      // Next frame so the transition kicks in
+      requestAnimationFrame(() => aura.classList.add('show'));
+    }
+
+    // Burst overlay (one-shot animation, then fades)
+    if (burst && isAssetReady('hatch-burst.png')) {
+      burst.src = ASSET_PATH + 'hatch-burst.png';
+      requestAnimationFrame(() => burst.classList.add('show'));
+    }
+
+    // Render the hatched item — prefer real PNG if the item has one, fallback to SVG or emoji
+    if (item.img && isAssetReady(item.img)) {
+      emoji.innerHTML = `<img src="${ASSET_PATH}${item.img}" class="modal-item-img" alt="">`;
+    } else if (item.svgKey) {
+      emoji.innerHTML = accessorySvg(item.svgKey, 'modal-large');
+    } else {
+      emoji.innerHTML = item.e;
+    }
+
     title.textContent = '✨ It hatched! ✨';
     document.getElementById('hatchRarity').textContent = item.rarity;
     document.getElementById('hatchRarity').className = 'item-rarity ' + item.rarity;
@@ -3479,10 +3591,14 @@ function showHatch(item, size) {
     result.style.display = 'block';
     playSound('reveal');
     if (state.settings.fx) burstConfetti(item.rarity);
-  }, 1500);
+  }, 1700);
 }
 
 function closeHatchModal() {
+  const aura  = document.getElementById('hatchAura');
+  const burst = document.getElementById('hatchBurst');
+  if (aura)  aura.classList.remove('show');
+  if (burst) burst.classList.remove('show');
   document.getElementById('hatchModal').classList.remove('show');
 }
 
@@ -6036,7 +6152,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v5.1-bg-cover-fit
+// build-marker: v5.2-hatch-modal-art
 </script>
 </body>
 </html>
