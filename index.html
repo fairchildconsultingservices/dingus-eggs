@@ -2154,6 +2154,35 @@ let lastCompleted = null; // for undo
 let lastCompletedTimer = null;
 
 // ============================================================
+// ASSET PRELOAD
+// ============================================================
+const ASSET_PATH = 'assets/';
+const _assetCache = {};
+function getAsset(filename) {
+  if (!filename) return null;
+  if (_assetCache[filename]) return _assetCache[filename];
+  const img = new Image();
+  img.src = ASSET_PATH + filename;
+  _assetCache[filename] = img;
+  return img;
+}
+function preloadAssets(filenames) {
+  filenames.forEach(f => getAsset(f));
+}
+function isAssetReady(filename) {
+  const img = _assetCache[filename];
+  return img && img.complete && img.naturalWidth > 0;
+}
+// Kick off preloads as soon as the script runs.
+preloadAssets([
+  'bg-hatchery.png',
+  'ducky-idle.png', 'ducky-cheer.png',
+  'egg-stage-1.png', 'egg-stage-2.png', 'egg-stage-3.png',
+  'hatch-burst.png', 'light-ring.png',
+  'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png'
+]);
+
+// ============================================================
 // STORAGE
 // ============================================================
 function save() {
@@ -4135,6 +4164,11 @@ function drawWarehouse() {
 }
 
 function drawWarehouseBackground(ctx, W, H) {
+  // Use the illustrated hatchery background when no themed background is equipped.
+  if (!state.equipped.background && isAssetReady('bg-hatchery.png')) {
+    ctx.drawImage(getAsset('bg-hatchery.png'), 0, 0, W, H);
+    return;
+  }
   // Background image based on equipped, otherwise default
   let theme = 'default';
   if (state.equipped.background) {
@@ -5986,7 +6020,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v4.1-enter-to-save-goal
+// build-marker: v5-assets-bg-hatchery
 </script>
 </body>
 </html>
