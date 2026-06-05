@@ -1474,8 +1474,8 @@
           <option>Creative</option><option>Social</option><option>Other</option>
         </select>
         <select id="filterStatus" onchange="renderGoals()">
+          <option value="open" selected>Open only</option>
           <option value="all">All goals</option>
-          <option value="open">Open only</option>
           <option value="done">Completed</option>
         </select>
         <select id="sortBy" onchange="renderGoals()">
@@ -6507,7 +6507,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7.1-big-avatars-reset-fix
+// build-marker: v7.2-default-filter-open
 </script>
 </body>
 </html>
