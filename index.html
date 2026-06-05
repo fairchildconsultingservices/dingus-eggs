@@ -378,6 +378,14 @@
   .egg-svg.big { width: 52px; height: 70px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
   .egg-svg.huge { width: 70px; height: 96px; filter: drop-shadow(0 0 12px var(--gold)); }
   .egg-svg.modal-egg { width: 110px; height: 150px; }
+  /* Site logo (replaces text H1 at the top of the app) */
+  .site-logo-link { display: block; text-align: center; line-height: 0; margin-bottom: 4px; }
+  .site-logo { max-width: min(560px, 70vw); height: auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.45)); }
+  /* Real egg PNGs in the Egg Collection */
+  .egg-img { display: block; margin: 0 auto; object-fit: contain; }
+  .egg-img.small { width: 64px; height: 64px; }
+  .egg-img.big   { width: 84px; height: 84px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); }
+  .egg-img.huge  { width: 104px; height: 104px; filter: drop-shadow(0 0 14px var(--gold)); }
   .accessory-svg {
     display: block;
     margin: 0 auto 6px;
@@ -1360,8 +1368,10 @@
 </div>
 
 <div class="app">
-  <h1>🥚 DINGUS EGGS 🥚</h1>
-  <p class="tagline">Crush your goals. Hatch your future. <span id="avatarNameDisplay"></span></p>
+  <a href="#" class="site-logo-link" onclick="event.preventDefault();">
+    <img src="assets/logo.png" alt="Dingus Eggs" class="site-logo">
+  </a>
+  <p class="tagline"><span id="avatarNameDisplay"></span></p>
 
   <div class="top-bar">
     <!-- AVATAR PANEL -->
@@ -3638,15 +3648,22 @@ function renderEggs() {
     list.innerHTML = '<div class="empty-state">No eggs yet — go crush some goals!</div>';
     return;
   }
+  // Use real PNG assets when available, falling back to the original SVG pixel art.
+  const eggImg = (size) => {
+    const file = size === 'small' ? 'egg-small.png' : size === 'big' ? 'egg-big.png' : 'egg-huge.png';
+    return isAssetReady(file)
+      ? `<img src="${ASSET_PATH}${file}" class="egg-img ${size}" alt="${size} egg">`
+      : eggSvg(size);
+  };
   let html = '';
   for (let i = 0; i < state.smallEggs; i++) {
-    html += `<div class="egg-card small" onclick="hatchEgg('small')">${eggSvg('small')}<div class="egg-label">Small</div></div>`;
+    html += `<div class="egg-card small" onclick="hatchEgg('small')">${eggImg('small')}<div class="egg-label">Small</div></div>`;
   }
   for (let i = 0; i < state.bigEggs; i++) {
-    html += `<div class="egg-card big" onclick="hatchEgg('big')">${eggSvg('big')}<div class="egg-label">Big</div></div>`;
+    html += `<div class="egg-card big" onclick="hatchEgg('big')">${eggImg('big')}<div class="egg-label">Big</div></div>`;
   }
   for (let i = 0; i < state.hugeEggs; i++) {
-    html += `<div class="egg-card huge" onclick="hatchEgg('huge')">${eggSvg('huge')}<div class="egg-label">Huge</div></div>`;
+    html += `<div class="egg-card huge" onclick="hatchEgg('huge')">${eggImg('huge')}<div class="egg-label">Huge</div></div>`;
   }
   list.innerHTML = html;
 }
@@ -6507,7 +6524,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7.2-default-filter-open
+// build-marker: v7.3-logo-and-egg-pngs
 </script>
 </body>
 </html>
