@@ -602,31 +602,69 @@
     object-fit: contain;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
   }
-  /* Pet / weapon shown to either side of the profile avatar */
-  .avatar-row {
+  /* Avatar frame becomes the positioning context for pet (at feet) + weapon (floating beside) */
+  #avatarFrame.avatar-frame { position: relative; width: 100%; max-width: 240px; margin: 0 auto; overflow: visible; }
+
+  /* Equipped pet — sits at the avatar's feet, slightly off-center, overlapping bottom ~15% */
+  .equipped-pet {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-15%, 18%);
+    width: 32%;
+    height: 32%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .equipped-pet:empty { display: none; }
+  .equipped-pet img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.45));
+  }
+  .equipped-pet .equipped-emoji { font-size: 2em; line-height: 1; }
+
+  /* Equipped weapon — floats to the right at hip height with a soft golden glow ring */
+  .equipped-weapon {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translate(40%, -40%);
+    width: 38%;
+    height: 38%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    width: 100%;
+    z-index: 2;
+    pointer-events: none;
   }
-  .avatar-row .avatar-frame { flex: 1 1 auto; min-width: 0; }
-  .equipped-slot {
-    flex: 0 0 auto;
-    width: 84px;
-    height: 84px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    transition: opacity 0.2s;
+  .equipped-weapon:empty { display: none; }
+  .equipped-weapon::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 60%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    height: 32%;
+    background: radial-gradient(ellipse at center, rgba(255,215,0,0.55) 0%, rgba(255,215,0,0.18) 45%, transparent 75%);
+    filter: blur(3px);
+    z-index: -1;
+    animation: weapon-aura-pulse 2.4s ease-in-out infinite;
   }
-  .equipped-slot:empty {
-    opacity: 0.35;
-    border: 1.5px dashed var(--border);
+  @keyframes weapon-aura-pulse {
+    0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+    50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.12); }
   }
-  .equipped-slot img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
-  .equipped-slot .equipped-emoji { font-size: 2.6em; line-height: 1; }
+  .equipped-weapon img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.4)) drop-shadow(0 0 8px rgba(255,215,0,0.5));
+  }
+  .equipped-weapon .equipped-emoji { font-size: 2em; line-height: 1; }
   /* Inventory item image (replaces emoji when item has art) */
   .item-card .item-img { display: block; width: 64px; height: 64px; object-fit: contain; margin: 0 auto 6px; }
   /* Layered avatar (paper-doll) */
@@ -1405,13 +1443,11 @@
     <div class="panel">
       <h2>Your Avatar</h2>
       <div class="avatar-display">
-        <div class="avatar-row">
-          <div class="equipped-slot equipped-pet"   id="equippedPetSlot"   title="Equipped pet"></div>
-          <div class="avatar-frame" id="avatarFrame">
-            <canvas id="avatarCanvas" width="64" height="64" style="display:none;"></canvas>
-            <img class="profile-avatar" id="profileAvatar" src="assets/avatar.png" alt="Your avatar">
-          </div>
-          <div class="equipped-slot equipped-weapon" id="equippedWeaponSlot" title="Equipped weapon"></div>
+        <div class="avatar-frame" id="avatarFrame">
+          <canvas id="avatarCanvas" width="64" height="64" style="display:none;"></canvas>
+          <img class="profile-avatar" id="profileAvatar" src="assets/avatar.png" alt="Your avatar">
+          <div class="equipped-pet"    id="equippedPetSlot"    title="Equipped pet"></div>
+          <div class="equipped-weapon" id="equippedWeaponSlot" title="Equipped weapon"></div>
         </div>
         <div style="width:100%;">
           <div style="display:flex; justify-content:space-between; font-size:0.8em; color:var(--text-dim); margin-bottom:2px;">
@@ -4496,7 +4532,14 @@ function drawWarehouse() {
       ctx.beginPath();
       ctx.ellipse(wh.petPos.x, wh.petPos.y + 18, 14, 4, 0, 0, Math.PI*2);
       ctx.fill();
-      drawPetSprite(ctx, wh.petPos.x, wh.petPos.y, state.equipped.pet, 1.4);
+      if (state.equipped.pet && state.equipped.pet.img && isAssetReady(state.equipped.pet.img)) {
+        const pImg = getAsset(state.equipped.pet.img);
+        const ph = 90;
+        const pw = ph * (pImg.naturalWidth / pImg.naturalHeight);
+        ctx.drawImage(pImg, wh.petPos.x - pw/2, wh.petPos.y + 18 - ph, pw, ph);
+      } else {
+        drawPetSprite(ctx, wh.petPos.x, wh.petPos.y, state.equipped.pet, 1.4);
+      }
     } else if (it.type === 'vehicle') {
       ctx.font = '36px serif';
       ctx.textAlign = 'center';
@@ -6584,7 +6627,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7.7-preload-all-loot
+// build-marker: v7.9-avatar-companion-layout
 </script>
 </body>
 </html>
