@@ -1896,7 +1896,7 @@ const ITEMS = {
     { e: '🦴', n: 'Bone', d: 'A simple bone', t: 'item' },
     { e: '🪨', n: 'Pebble', d: 'Just a rock', t: 'item' },
     { e: '🍎', n: 'Apple', d: 'Healthy snack', t: 'item' },
-    { e: '🐭', n: 'Pet Mouse', d: 'Tiny squeaky friend', t: 'pet', img: 'creature-common.png' },
+    { e: '🐭', n: 'Muddy', d: 'Squishy axolotl with a permanently curious face.', t: 'pet', img: 'creature-common.png' },
     { e: '🐸', n: 'Pet Frog', d: 'Ribbits encouragingly', t: 'pet' },
     { e: '🪙', n: 'Lucky Coin', d: 'A coin for fortune', t: 'item' },
     { e: '🎁', n: 'Mystery Gift', d: 'Looks promising', t: 'item', img: 'object-treasure.png' },
@@ -1919,7 +1919,7 @@ const ITEMS = {
   uncommon: [
     { e: '🎒', n: 'Backpack', d: 'Carry your dreams', t: 'accessory' },
     { e: '🧣', n: 'Cool Scarf', d: 'Drip incoming', t: 'accessory' },
-    { e: '🐱', n: 'Pet Cat', d: 'Judgmental but loyal', t: 'pet', img: 'creature-uncommon.png' },
+    { e: '🐱', n: 'Otter', d: 'Snuggly otter that holds your hand while sleeping.', t: 'pet', img: 'creature-uncommon.png' },
     { e: '🐶', n: 'Pet Puppy', d: 'Will follow you anywhere', t: 'pet' },
     { e: '🐰', n: 'Pet Rabbit', d: 'Hops with joy', t: 'pet' },
     { e: '🌲', n: 'Forest Background', d: 'Peaceful woods', t: 'background' },
@@ -1945,7 +1945,7 @@ const ITEMS = {
     { e: '⚔️', n: 'Iron Sword', d: 'Heavy and reliable', t: 'weapon', power: 14 },
   ],
   rare: [
-    { e: '🐺', n: 'Pet Wolf', d: 'Lone wanderer companion', t: 'pet', img: 'creature-rare.png' },
+    { e: '🐺', n: 'Fractal', d: 'A crystal-scaled dragon — geometry given life.', t: 'pet', img: 'creature-rare.png' },
     { e: '🦊', n: 'Pet Fox', d: 'Sly and clever', t: 'pet' },
     { e: '🦅', n: 'Pet Eagle', d: 'Soars above your goals', t: 'pet' },
     { e: '⚔️', n: 'Steel Sword', d: 'Battle-tested blade', t: 'weapon', power: 22, img: 'weapon-sword.png' },
@@ -1972,7 +1972,7 @@ const ITEMS = {
     { e: '✨', n: 'Witch Hat', d: 'Brewing trouble in style', t: 'accessory', svgKey: 'witchHat', customDraw: 'witchHat' },
   ],
   epic: [
-    { e: '🐻', n: 'Pet Newfoundland', d: 'Massive fluffy guardian', t: 'pet', img: 'creature-epic.png' },
+    { e: '🐻', n: 'Griffin', d: 'Half-eagle, half-lion, all golden majesty.', t: 'pet', img: 'creature-epic.png' },
     { e: '🦁', n: 'Pet Lion', d: 'King of the jungle', t: 'pet' },
     { e: '🐯', n: 'Pet Tiger', d: 'Majestic predator', t: 'pet' },
     { e: '🦄', n: 'Pet Unicorn', d: 'Magical and rare', t: 'pet' },
@@ -1998,7 +1998,7 @@ const ITEMS = {
     { e: '⚔️', n: 'Greatsword', d: 'Two-handed, devastating', t: 'weapon', power: 32 },
   ],
   legendary: [
-    { e: '🐉', n: 'Pet Dragon', d: 'A real dragon. Yes. A dragon.', t: 'pet', img: 'creature-legendary.png' },
+    { e: '🐉', n: 'Phoenix', d: 'Reborn from ashes daily.', t: 'pet', img: 'creature-legendary.png' },
     { e: '🔱', n: "Poseidon's Trident", d: 'Command the seas', t: 'weapon', power: 52, img: 'weapon-trident.png' },
     { e: '🚁', n: 'Helicopter', d: 'Sky is the limit', t: 'vehicle', img: 'vehicle-helicopter.png' },
     { e: '🛸', n: 'UFO', d: 'Definitely yours now', t: 'vehicle', img: 'vehicle-ufo.png' },
@@ -2021,7 +2021,7 @@ const ITEMS = {
   mythic: [
     { e: '✨', n: 'Wish Star', d: 'One wish, anything you want', t: 'item' },
     { e: '⚡', n: "Zeus's Lightning", d: 'Pure divine power', t: 'weapon', power: 78, img: 'weapon-lightning.png' },
-    { e: '🔥', n: 'Pet Phoenix', d: 'Reborn from ashes daily', t: 'pet', img: 'creature-mythic.png' },
+    { e: '🔥', n: 'Ninetails', d: 'Mythic nine-tailed fox of shifting rainbow flame.', t: 'pet', img: 'creature-mythic.png' },
     { e: '🚀', n: 'Personal Rocket', d: 'To the moon, literally', t: 'vehicle', img: 'object-rocket.png' },
     { e: '👁️', n: 'Eye of Providence', d: 'Sees all your future wins', t: 'item' },
     { e: '🪐', n: 'Infinity Stone', d: 'Reality bends to you', t: 'item' },
@@ -2464,6 +2464,29 @@ function normalizeState() {
     const before = state.inventory.length;
     state.inventory = state.inventory.filter(i => i && i.img);
     if (state.inventory.length !== before) changed = true;
+  }
+  // Migrate creature names: old hatches stored "Pet Mouse" etc. Rename them
+  // based on the image they're tied to so old and new pets match.
+  const CREATURE_RENAMES = {
+    'creature-common.png':    'Muddy',
+    'creature-uncommon.png':  'Otter',
+    'creature-rare.png':      'Fractal',
+    'creature-epic.png':      'Griffin',
+    'creature-legendary.png': 'Phoenix',
+    'creature-mythic.png':    'Ninetails',
+  };
+  if (Array.isArray(state.inventory)) {
+    state.inventory.forEach(item => {
+      const newName = item && item.img && CREATURE_RENAMES[item.img];
+      if (newName && item.n !== newName) { item.n = newName; changed = true; }
+    });
+  }
+  if (state.equipped) {
+    Object.keys(state.equipped).forEach(slot => {
+      const eq = state.equipped[slot];
+      const newName = eq && eq.img && CREATURE_RENAMES[eq.img];
+      if (newName && eq.n !== newName) { eq.n = newName; changed = true; }
+    });
   }
   // Unequip any slot that was pointing at one of those removed items.
   if (state.equipped) {
@@ -6689,7 +6712,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v8.3-hatchall-art-and-inventory-purge
+// build-marker: v8.4-creature-renames
 </script>
 </body>
 </html>
