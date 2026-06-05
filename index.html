@@ -602,6 +602,33 @@
     object-fit: contain;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
   }
+  /* Pet / weapon shown to either side of the profile avatar */
+  .avatar-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+  }
+  .avatar-row .avatar-frame { flex: 1 1 auto; min-width: 0; }
+  .equipped-slot {
+    flex: 0 0 auto;
+    width: 84px;
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    transition: opacity 0.2s;
+  }
+  .equipped-slot:empty {
+    opacity: 0.35;
+    border: 1.5px dashed var(--border);
+  }
+  .equipped-slot img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
+  .equipped-slot .equipped-emoji { font-size: 2.6em; line-height: 1; }
+  /* Inventory item image (replaces emoji when item has art) */
+  .item-card .item-img { display: block; width: 64px; height: 64px; object-fit: contain; margin: 0 auto 6px; }
   /* Layered avatar (paper-doll) */
   .layered-avatar {
     position: relative;
@@ -1378,9 +1405,13 @@
     <div class="panel">
       <h2>Your Avatar</h2>
       <div class="avatar-display">
-        <div class="avatar-frame" id="avatarFrame">
-          <canvas id="avatarCanvas" width="64" height="64" style="display:none;"></canvas>
-          <img class="profile-avatar" id="profileAvatar" src="assets/avatar.png" alt="Your avatar">
+        <div class="avatar-row">
+          <div class="equipped-slot equipped-pet"   id="equippedPetSlot"   title="Equipped pet"></div>
+          <div class="avatar-frame" id="avatarFrame">
+            <canvas id="avatarCanvas" width="64" height="64" style="display:none;"></canvas>
+            <img class="profile-avatar" id="profileAvatar" src="assets/avatar.png" alt="Your avatar">
+          </div>
+          <div class="equipped-slot equipped-weapon" id="equippedWeaponSlot" title="Equipped weapon"></div>
         </div>
         <div style="width:100%;">
           <div style="display:flex; justify-content:space-between; font-size:0.8em; color:var(--text-dim); margin-bottom:2px;">
@@ -2349,7 +2380,12 @@ preloadAssets([
   'hatch-burst.png','light-ring.png',
   'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png',
   'icon-add.png','icon-edit.png','icon-delete.png','icon-settings.png','icon-close.png','icon-undo.png',
-  'tab-goals.png','tab-eggs.png','tab-inventory.png'
+  'tab-goals.png','tab-eggs.png','tab-inventory.png',
+  // Every hatchable loot image so they're cached before any hatch
+  'creature-common.png','creature-uncommon.png','creature-rare.png','creature-epic.png','creature-legendary.png','creature-mythic.png',
+  'weapon-sword.png','weapon-trident.png','weapon-lightning.png',
+  'vehicle-car.png','vehicle-helicopter.png','vehicle-ufo.png',
+  'object-rocket.png','object-crown.png','object-wizard-hat.png','object-treasure.png'
 ]);
 
 // ============================================================
@@ -3122,6 +3158,7 @@ function drawMouth(px, av) {
 function drawAvatar(canvasId) {
   // Keep the layered avatar (profile + customizer previews) in sync
   if (typeof renderLayeredAvatar === 'function') renderLayeredAvatar();
+  if (typeof renderEquippedSlots === 'function') renderEquippedSlots();
   const canvas = document.getElementById(canvasId || 'avatarCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -3768,13 +3805,14 @@ function showHatch(item, size) {
       requestAnimationFrame(() => burst.classList.add('show'));
     }
 
-    // Render the hatched item — prefer real PNG if the item has one, fallback to SVG or emoji
-    if (item.img && isAssetReady(item.img)) {
-      emoji.innerHTML = `<img src="${ASSET_PATH}${item.img}" class="modal-item-img" alt="">`;
+    // Render the hatched item. If the item has art, always emit the img tag — the browser
+    // handles loading and an onerror catches the rare case of a missing file.
+    if (item.img) {
+      emoji.innerHTML = `<img src="${ASSET_PATH}${item.img}" class="modal-item-img" alt="${escapeHtml(item.n || '')}">`;
     } else if (item.svgKey) {
       emoji.innerHTML = accessorySvg(item.svgKey, 'modal-large');
     } else {
-      emoji.innerHTML = item.e;
+      emoji.innerHTML = '<span style="font-size:0.7em; color:var(--text-dim);">' + escapeHtml(item.n || '') + '</span>';
     }
 
     title.textContent = '✨ It hatched! ✨';
@@ -3902,7 +3940,7 @@ function renderInventory() {
     const isEquipped = slot && state.equipped[slot] && state.equipped[slot].id === item.id;
     return `
     <div class="item-card ${item.rarity} ${isEquipped ? 'equipped' : ''}" onclick="equipItem('${item.id}')">
-      ${item.svgKey ? accessorySvg(item.svgKey) : `<div class="item-emoji">${item.e}</div>`}
+      ${item.img ? `<img src="${ASSET_PATH}${item.img}" class="item-img" alt="${escapeHtml(item.n)}">` : item.svgKey ? accessorySvg(item.svgKey) : `<div class="item-emoji">${item.e}</div>`}
       <div class="item-name">${escapeHtml(item.n)}</div>
       <div class="item-rarity ${item.rarity}">${item.rarity}</div>
       <div style="font-size:0.7em; color:var(--text-dim); margin-top:3px;">${item.t}</div>
@@ -3919,6 +3957,23 @@ function getSlotForType(t) {
   if (t === 'vehicle') return 'vehicle';
   if (t === 'frame') return 'frame';
   return null;
+}
+
+function renderEquippedSlots() {
+  const renderSlot = (id, item) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!item) { el.innerHTML = ''; return; }
+    if (item.img) {
+      el.innerHTML = `<img src="${ASSET_PATH}${item.img}" alt="${escapeHtml(item.n || '')}">`;
+    } else if (item.svgKey) {
+      el.innerHTML = accessorySvg(item.svgKey, 'slot');
+    } else {
+      el.innerHTML = `<span class="equipped-emoji">${item.e || ''}</span>`;
+    }
+  };
+  renderSlot('equippedPetSlot',    state.equipped && state.equipped.pet);
+  renderSlot('equippedWeaponSlot', state.equipped && state.equipped.weapon);
 }
 
 function applyAvatarFrame() {
@@ -6529,7 +6584,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7.5-remove-accessories-items
+// build-marker: v7.7-preload-all-loot
 </script>
 </body>
 </html>
