@@ -822,6 +822,77 @@
   .modal-egg-img { width: 180px; height: 180px; object-fit: contain; }
   .modal-item-img { width: 200px; height: 200px; object-fit: contain; }
   .empty-state { text-align: center; padding: 30px; color: #777; }
+  /* Focus / Pomodoro timer */
+  .focus-card {
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+  }
+  .focus-card input[type="text"] {
+    width: 100%;
+    max-width: 480px;
+    padding: 10px;
+    font-size: 1.05em;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 6px;
+    font-family: inherit;
+    text-align: center;
+  }
+  .focus-timer-display {
+    font-size: 5em;
+    font-weight: 700;
+    color: var(--gold);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 4px;
+    margin: 22px 0 14px;
+    text-shadow: 0 2px 8px rgba(255,215,0,0.25);
+  }
+  .focus-timer-display.running { animation: focus-pulse 2s ease-in-out infinite; }
+  @keyframes focus-pulse {
+    0%, 100% { color: var(--gold); }
+    50%      { color: var(--gold-soft); }
+  }
+  .focus-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .focus-controls button { font-size: 0.95em; }
+  .focus-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .focus-settings { margin-top: 14px; font-size: 0.85em; color: var(--text-dim); }
+  .focus-settings label { display: inline-flex; align-items: center; gap: 6px; }
+  .focus-settings input[type="number"] {
+    width: 60px;
+    padding: 4px 6px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-family: inherit;
+    text-align: center;
+  }
+  .focus-log {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel-soft);
+    padding: 4px 0;
+  }
+  .focus-log-entry {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9em;
+    align-items: center;
+  }
+  .focus-log-entry:last-child { border-bottom: 0; }
+  .focus-log-entry .fle-action { color: var(--text); font-weight: 600; }
+  .focus-log-entry .fle-meta { color: var(--text-dim); font-size: 0.85em; white-space: nowrap; }
+  .focus-log-entry .fle-duration { color: var(--gold); font-weight: 700; white-space: nowrap; }
+  .focus-log-entry.incomplete .fle-action::after { content: ' · partial'; color: var(--text-dim); font-weight: 400; font-size: 0.8em; }
   .toast {
     position: fixed;
     bottom: 20px;
@@ -1530,6 +1601,7 @@
     <button class="tab" data-tab="warehouse">🏠 The Hatchery</button>
     <button class="tab" data-tab="stats">📊 Stats</button>
     <button class="tab" data-tab="achievements">🏆 Achievements</button>
+    <button class="tab" data-tab="focus">⏱️ Focus</button>
     <button class="tab" data-tab="settings"><img src="assets/icon-settings.png" class="tab-icon" alt="">Settings</button>
   </div>
 
@@ -1677,6 +1749,36 @@
       <h2>Achievements</h2>
       <p style="color:var(--text-dim); font-size:0.85em; margin-bottom:12px;">Unlock badges by hitting milestones. Each unlock gives you bonus XP.</p>
       <div id="achievementsList" class="achievements-grid"></div>
+    </div>
+  </div>
+
+  <!-- FOCUS TAB (Pomodoro timer + session log + export) -->
+  <div class="tab-content" id="tab-focus">
+    <div class="panel">
+      <h2>⏱️ Focus Timer</h2>
+      <p style="color:var(--text-dim); font-size:0.85em; margin-bottom:14px;">
+        Time your work in Pomodoro-style blocks. Every 15 minutes you log earns you a 🥚 Huge Egg when you stop.
+      </p>
+      <div class="focus-card">
+        <input type="text" id="focusAction" placeholder="What are you working on?" maxlength="100" onkeydown="if(event.key==='Enter')focusStart()">
+        <div class="focus-timer-display" id="focusTimerDisplay">25:00</div>
+        <div class="focus-controls">
+          <button id="focusStartBtn" onclick="focusStart()">▶ Start</button>
+          <button id="focusPauseBtn" onclick="focusPause()" disabled>⏸ Pause</button>
+          <button id="focusStopBtn"  onclick="focusStop()"  disabled>⏹ Stop &amp; Log</button>
+          <button class="secondary"  onclick="focusReset()">↺ Reset</button>
+        </div>
+        <div class="focus-settings">
+          <label>Work min: <input type="number" id="focusWorkMins" value="25" min="1" max="240" onchange="focusSettingsChanged()"></label>
+        </div>
+      </div>
+      <h3 style="margin-top: 24px;">Session Log</h3>
+      <div class="focus-log" id="focusLog"></div>
+      <div class="focus-export" style="margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="secondary" onclick="exportFocusCSV()">📥 Export CSV</button>
+        <button class="secondary" onclick="exportFocusXLS()">📥 Export Excel</button>
+        <button class="danger" onclick="clearFocusLog()"><img src="assets/icon-delete.png" class="btn-icon" alt="">Clear Log</button>
+      </div>
     </div>
   </div>
 
@@ -6481,6 +6583,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (tab.dataset.tab === 'warehouse') { buildDecorations(); updateWarehouseStatus(); }
     if (tab.dataset.tab === 'stats') renderStatsTab();
     if (tab.dataset.tab === 'achievements') renderAchievements();
+    if (tab.dataset.tab === 'focus') focusTabActivate();
     playSound('click');
   };
 });
@@ -6653,13 +6756,12 @@ function renderSimpleGoals() {
   }
   const today = new Date().toDateString();
   const todayK = todayKey();
-  // Hide one-time goals completed on a previous day unless the user wants the backlog
-  let pool = state.goals;
-  if (!state.settings.showBacklog) {
-    pool = pool.filter(g => !(g.completed && g.completedDate && g.completedDate !== todayK));
-  }
+  // Simple mode is always open-only — no completed one-times, no daily-done-today.
+  let pool = state.goals.filter(g =>
+    !g.completed && !(g.type === 'daily' && g.lastCompletedDate === today)
+  );
   if (pool.length === 0) {
-    list.innerHTML = '<div class="pad-empty">~ no goals for today ~<br>jot one down below</div>';
+    list.innerHTML = '<div class="pad-empty">~ all done for today ~<br>jot down something new below</div>';
     return;
   }
   // Sort: open first, then completed
@@ -6789,7 +6891,223 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v8.8-bg-equipped-priority
+// ============================================================
+// FOCUS TIMER (Pomodoro) — track work sessions, reward huge eggs
+// ============================================================
+let focusInterval = null;
+let focusSecondsLeft = 0;
+let focusCurrentSession = null;
+
+function focusEnsureState() {
+  if (!Array.isArray(state.focusSessions)) state.focusSessions = [];
+  if (!state.focusConfig) state.focusConfig = { workMinutes: 25 };
+}
+
+function focusFormat(seconds) {
+  const m = Math.max(0, Math.floor(seconds / 60));
+  const s = Math.max(0, seconds % 60);
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function focusUpdateDisplay(seconds) {
+  const el = document.getElementById('focusTimerDisplay');
+  if (el) el.textContent = focusFormat(seconds);
+}
+
+function focusTabActivate() {
+  focusEnsureState();
+  const workInput = document.getElementById('focusWorkMins');
+  if (workInput) workInput.value = state.focusConfig.workMinutes;
+  if (!focusInterval && !focusCurrentSession) {
+    focusUpdateDisplay(state.focusConfig.workMinutes * 60);
+  }
+  renderFocusLog();
+}
+
+function focusSettingsChanged() {
+  focusEnsureState();
+  const mins = parseInt(document.getElementById('focusWorkMins').value);
+  if (mins && mins > 0) {
+    state.focusConfig.workMinutes = mins;
+    save();
+    if (!focusInterval && !focusCurrentSession) focusUpdateDisplay(mins * 60);
+  }
+}
+
+function focusStart() {
+  focusEnsureState();
+  if (focusInterval) return;
+  const actionEl = document.getElementById('focusAction');
+  const action = (actionEl.value || '').trim();
+  if (!action && !focusCurrentSession) {
+    toast('What are you working on?');
+    actionEl.focus();
+    return;
+  }
+  if (!focusCurrentSession) {
+    const workMins = parseInt(document.getElementById('focusWorkMins').value) || 25;
+    state.focusConfig.workMinutes = workMins;
+    focusCurrentSession = {
+      action,
+      startedAt: new Date().toISOString(),
+      targetMinutes: workMins,
+      elapsedSeconds: 0,
+      completed: false
+    };
+    focusSecondsLeft = workMins * 60;
+  }
+  document.getElementById('focusStartBtn').disabled = true;
+  document.getElementById('focusPauseBtn').disabled = false;
+  document.getElementById('focusStopBtn').disabled  = false;
+  document.getElementById('focusTimerDisplay').classList.add('running');
+  focusInterval = setInterval(() => {
+    focusSecondsLeft--;
+    focusCurrentSession.elapsedSeconds++;
+    focusUpdateDisplay(focusSecondsLeft);
+    if (focusSecondsLeft <= 0) {
+      focusCurrentSession.completed = true;
+      focusFinish('🎉 Pomodoro complete!');
+    }
+  }, 1000);
+}
+
+function focusPause() {
+  if (focusInterval) { clearInterval(focusInterval); focusInterval = null; }
+  document.getElementById('focusStartBtn').disabled = false;
+  document.getElementById('focusPauseBtn').disabled = true;
+  document.getElementById('focusTimerDisplay').classList.remove('running');
+}
+
+function focusStop() {
+  focusFinish('Session logged.');
+}
+
+function focusReset() {
+  if (focusInterval) { clearInterval(focusInterval); focusInterval = null; }
+  focusCurrentSession = null;
+  document.getElementById('focusStartBtn').disabled = false;
+  document.getElementById('focusPauseBtn').disabled = true;
+  document.getElementById('focusStopBtn').disabled  = true;
+  document.getElementById('focusAction').value = '';
+  document.getElementById('focusTimerDisplay').classList.remove('running');
+  focusEnsureState();
+  focusUpdateDisplay(state.focusConfig.workMinutes * 60);
+}
+
+function focusFinish(msg) {
+  if (focusInterval) { clearInterval(focusInterval); focusInterval = null; }
+  document.getElementById('focusTimerDisplay').classList.remove('running');
+  focusEnsureState();
+  if (focusCurrentSession && focusCurrentSession.elapsedSeconds > 0) {
+    state.focusSessions.unshift(focusCurrentSession);
+    // Reward: 1 huge egg per 15 minutes logged
+    const minutes = Math.floor(focusCurrentSession.elapsedSeconds / 60);
+    const eggsEarned = Math.floor(minutes / 15);
+    if (eggsEarned > 0) {
+      state.hugeEggs = (state.hugeEggs || 0) + eggsEarned;
+      toast(`${msg} +${eggsEarned} 🥚 Huge Egg${eggsEarned > 1 ? 's' : ''} earned (${minutes} min)`);
+      playSound && playSound('complete');
+      if (state.settings && state.settings.fx) burstConfetti && burstConfetti();
+    } else {
+      toast(`${msg} ${minutes}m logged — keep going for a Huge Egg at 15 min.`);
+    }
+    if (typeof renderStats === 'function') renderStats();
+    if (typeof renderEggs === 'function') renderEggs();
+  }
+  focusCurrentSession = null;
+  document.getElementById('focusStartBtn').disabled = false;
+  document.getElementById('focusPauseBtn').disabled = true;
+  document.getElementById('focusStopBtn').disabled  = true;
+  document.getElementById('focusAction').value = '';
+  focusUpdateDisplay(state.focusConfig.workMinutes * 60);
+  save();
+  renderFocusLog();
+}
+
+function renderFocusLog() {
+  const el = document.getElementById('focusLog');
+  if (!el) return;
+  focusEnsureState();
+  const sessions = state.focusSessions;
+  if (sessions.length === 0) {
+    el.innerHTML = '<div class="empty-state">No focus sessions yet. Hit Start to begin.</div>';
+    return;
+  }
+  el.innerHTML = sessions.slice(0, 200).map(s => {
+    const d = new Date(s.startedAt);
+    const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const minutes = Math.round(s.elapsedSeconds / 60);
+    const eggs = Math.floor(minutes / 15);
+    return `<div class="focus-log-entry${s.completed ? '' : ' incomplete'}">
+      <span class="fle-action">${escapeHtml(s.action || '(untitled)')}</span>
+      <span class="fle-meta">${dateStr} · ${timeStr}</span>
+      <span class="fle-duration">${minutes}m</span>
+      <span class="fle-meta">${eggs > 0 ? '+' + eggs + ' 🥚🥚🥚' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function clearFocusLog() {
+  if (!confirm('Clear the entire focus session log? Earned eggs stay in your stash.')) return;
+  state.focusSessions = [];
+  save();
+  renderFocusLog();
+  toast('Focus log cleared.');
+}
+
+function focusSessionsToRows() {
+  focusEnsureState();
+  return state.focusSessions.map(s => {
+    const d = new Date(s.startedAt);
+    return {
+      date: d.toLocaleDateString('en-US'),
+      time: d.toLocaleTimeString('en-US'),
+      action: s.action || '',
+      durationMin: Math.round(s.elapsedSeconds / 60),
+      targetMin: s.targetMinutes || '',
+      completed: s.completed ? 'yes' : 'no'
+    };
+  });
+}
+
+function exportFocusCSV() {
+  const rows = focusSessionsToRows();
+  if (rows.length === 0) { toast('No sessions to export.'); return; }
+  const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+  let csv = 'Date,Time,Action,Duration (min),Target (min),Completed\n';
+  rows.forEach(r => {
+    csv += [r.date, r.time, esc(r.action), r.durationMin, r.targetMin, r.completed].join(',') + '\n';
+  });
+  focusDownload(csv, `dingus-focus-${todayKey()}.csv`, 'text/csv;charset=utf-8');
+}
+
+function exportFocusXLS() {
+  const rows = focusSessionsToRows();
+  if (rows.length === 0) { toast('No sessions to export.'); return; }
+  // Excel parses .xls files that contain an HTML <table> — no external library needed.
+  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  html += '<head><meta charset="utf-8"></head><body><table border="1"><tr>';
+  html += '<th>Date</th><th>Time</th><th>Action</th><th>Duration (min)</th><th>Target (min)</th><th>Completed</th></tr>';
+  rows.forEach(r => {
+    html += `<tr><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.time)}</td><td>${escapeHtml(r.action)}</td><td>${r.durationMin}</td><td>${r.targetMin}</td><td>${r.completed}</td></tr>`;
+  });
+  html += '</table></body></html>';
+  focusDownload(html, `dingus-focus-${todayKey()}.xls`, 'application/vnd.ms-excel');
+}
+
+function focusDownload(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+}
+
+// build-marker: v9-focus-timer-and-simple-mode
 </script>
 </body>
 </html>
