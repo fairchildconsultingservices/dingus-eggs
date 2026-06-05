@@ -618,12 +618,13 @@
   }
   .equipped-bg-layer.show { display: block; }
 
-  /* Equipped frame overlay — decorative border drawn on top of everything */
+  /* Equipped frame overlay — decorative border drawn on top, expanded so the avatar + pet fit inside the opening */
   .equipped-frame-overlay {
     position: absolute;
-    top: -6%; left: -6%;
-    width: 112%; height: 112%;
+    top: -18%; left: -14%;
+    width: 128%; height: 138%;
     object-fit: contain;
+    object-position: center;
     pointer-events: none;
     z-index: 5;
     display: none;
@@ -6782,7 +6783,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v8.6-no-trade-confirm
+// build-marker: v8.7-frame-fit
 </script>
 </body>
 </html>
