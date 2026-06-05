@@ -2335,10 +2335,12 @@ function isAssetReady(filename) {
 }
 // Kick off preloads as soon as the script runs.
 preloadAssets([
+  'logo.png',
   'avatar.png','avatar-sword-steve.png',
   'bg-hatchery.png','bg-trophy.png','bg-colosseum.png','bg-garage.png',
   'door-trophy.png','door-colosseum.png','door-garage.png',
   'ducky-idle.png','ducky-cheer.png','ducky-market.png',
+  'egg-small.png','egg-big.png','egg-huge.png',
   'egg-stage-1.png','egg-stage-2.png','egg-stage-3.png',
   'hatch-burst.png','light-ring.png',
   'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png',
@@ -3648,12 +3650,11 @@ function renderEggs() {
     list.innerHTML = '<div class="empty-state">No eggs yet — go crush some goals!</div>';
     return;
   }
-  // Use real PNG assets when available, falling back to the original SVG pixel art.
+  // Render the real PNG. The browser handles its own loading and will show the image
+  // as soon as it's downloaded — no need to gate on isAssetReady (which races first-render).
   const eggImg = (size) => {
     const file = size === 'small' ? 'egg-small.png' : size === 'big' ? 'egg-big.png' : 'egg-huge.png';
-    return isAssetReady(file)
-      ? `<img src="${ASSET_PATH}${file}" class="egg-img ${size}" alt="${size} egg">`
-      : eggSvg(size);
+    return `<img src="${ASSET_PATH}${file}" class="egg-img ${size}" alt="${size} egg" onerror="this.outerHTML=this.dataset.fb||''" data-fb="${eggSvg(size).replace(/"/g, '&quot;')}">`;
   };
   let html = '';
   for (let i = 0; i < state.smallEggs; i++) {
@@ -6524,7 +6525,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7.3-logo-and-egg-pngs
+// build-marker: v7.4-egg-preload-fix
 </script>
 </body>
 </html>
