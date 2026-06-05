@@ -4408,7 +4408,7 @@ function drawWarehouse() {
       // Static avatar image (fallback to chibi if image not yet loaded)
       if (isAssetReady('avatar.png')) {
         const aImg = getAsset('avatar.png');
-        const ah = 108; // bumped 20% for less grain at canvas scale
+        const ah = 324; // 3× previous size per request
         const aw = ah * (aImg.naturalWidth / aImg.naturalHeight);
         ctx.drawImage(aImg, state.warehouseAvatarPos.x - aw/2, state.warehouseAvatarPos.y + 32 - ah, aw, ah);
       } else {
@@ -4600,12 +4600,13 @@ function updateWarehouseStatus() {
 
 function drawMarketplaceStall(ctx, s) {
   if (isAssetReady('ducky-market.png')) {
-    // Render Ducky a bit larger than the click hitbox so the character has visual presence.
+    // Match the player avatar's height so they read as roughly the same scale.
     const img = getAsset('ducky-market.png');
-    const renderH = 140;
+    const renderH = 324;
     const renderW = renderH * (img.naturalWidth / img.naturalHeight);
+    const canvasH = (ctx.canvas && ctx.canvas.height) ? ctx.canvas.height : 400;
     const renderX = s.x + s.w/2 - renderW/2;
-    const renderY = s.y + s.h - renderH + 10; // anchor bottom near the stall's base
+    const renderY = canvasH - renderH + 4; // anchor Ducky's feet near the canvas floor
     if (wh.nearStall) {
       ctx.fillStyle = 'rgba(255,215,0,0.22)';
       ctx.fillRect(renderX - 6, renderY - 6, renderW + 12, renderH + 12);
@@ -4844,7 +4845,14 @@ function drawTrophyRoom(ctx, W, H) {
       ctx.beginPath();
       ctx.ellipse(ap.x, ap.y + 30, 18, 5, 0, 0, Math.PI*2);
       ctx.fill();
-      drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+      if (isAssetReady('avatar.png')) {
+        const aImg = getAsset('avatar.png');
+        const ah = 324;
+        const aw = ah * (aImg.naturalWidth / aImg.naturalHeight);
+        ctx.drawImage(aImg, ap.x - aw/2, ap.y + 32 - ah, aw, ah);
+      } else {
+        drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+      }
     }
   });
   // Pet
@@ -5126,7 +5134,14 @@ function drawGarage(ctx, W, H) {
       ctx.beginPath();
       ctx.ellipse(ap.x, ap.y + 30, 18, 5, 0, 0, Math.PI*2);
       ctx.fill();
-      drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+      if (isAssetReady('avatar.png')) {
+        const aImg = getAsset('avatar.png');
+        const ah = 324;
+        const aw = ah * (aImg.naturalWidth / aImg.naturalHeight);
+        ctx.drawImage(aImg, ap.x - aw/2, ap.y + 32 - ah, aw, ah);
+      } else {
+        drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+      }
     }
   });
   // Pet
@@ -5323,7 +5338,7 @@ function drawColosseum(ctx, W, H) {
       ctx.fill();
       if (isAssetReady('avatar-sword-steve.png')) {
         const sImg = getAsset('avatar-sword-steve.png');
-        const sh = 108;
+        const sh = 324; // match player avatar
         const sw = sh * (sImg.naturalWidth / sImg.naturalHeight);
         ctx.drawImage(sImg, stevePos.x - sw/2, stevePos.y + 32 - sh, sw, sh);
       } else {
@@ -5349,7 +5364,14 @@ function drawColosseum(ctx, W, H) {
       ctx.beginPath();
       ctx.ellipse(ap.x, ap.y + 30, 18, 5, 0, 0, Math.PI*2);
       ctx.fill();
-      drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+      if (isAssetReady('avatar.png')) {
+        const aImg = getAsset('avatar.png');
+        const ah = 324;
+        const aw = ah * (aImg.naturalWidth / aImg.naturalHeight);
+        ctx.drawImage(aImg, ap.x - aw/2, ap.y + 32 - ah, aw, ah);
+      } else {
+        drawChibi(ctx, ap.x, ap.y + 32, 2, state.avatar, { equipped: state.equipped });
+      }
     }
   });
   if (state.equipped.pet) {
@@ -6243,28 +6265,44 @@ function importData(e) {
   reader.readAsText(file);
 }
 async function resetAll() {
-  if (!confirm('REALLY reset everything? All goals, eggs, items, and achievements will be wiped — locally AND in the cloud.')) return;
+  if (!confirm('REALLY reset everything? All goals, eggs, items, and achievements will be wiped — locally AND in the cloud. You will be signed out.')) return;
   if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
-  // Wipe cloud first (so it doesn't restore on reload), then wipe local, then reload.
+
+  // 1. Cancel any pending cloud pushes so they cannot race our delete or reload.
+  try { if (typeof cloudSyncTimer !== 'undefined' && cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; } } catch(_) {}
+  try { if (typeof profilePushTimer !== 'undefined' && profilePushTimer) { clearTimeout(profilePushTimer); profilePushTimer = null; } } catch(_) {}
+
+  // 2. Wipe localStorage immediately — this is the most important step and we don't want it gated on the cloud calls.
+  try { localStorage.removeItem('dingusEggs'); } catch(_) {}
+
+  // 3. Wipe cloud rows (best-effort; ignore failures).
   try {
-    if (typeof sb !== 'undefined' && sb && currentUser) {
-      // Cancel any in-flight pushes so they don't race the delete
-      if (typeof cloudSyncTimer !== 'undefined' && cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
-      if (typeof profilePushTimer !== 'undefined' && profilePushTimer) { clearTimeout(profilePushTimer); profilePushTimer = null; }
+    if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
       const userId = currentUser.id;
-      // Drop the private save
       const r1 = await sb.from('user_state').delete().eq('user_id', userId);
-      if (r1.error) console.warn('Cloud user_state delete failed:', r1.error);
-      // Blank the public profile (keep friend code so visitors don't 404)
-      const r2 = await sb.from('public_profiles').update({
-        avatar: {}, equipped: {}, level: 1, display_name: ''
-      }).eq('user_id', userId);
-      if (r2.error) console.warn('Cloud public_profiles wipe failed:', r2.error);
+      if (r1 && r1.error) console.warn('user_state delete failed:', r1.error);
+      const r2 = await sb.from('public_profiles').delete().eq('user_id', userId);
+      if (r2 && r2.error) console.warn('public_profiles delete failed:', r2.error);
     }
-  } catch (e) {
-    console.warn('Cloud reset exception:', e);
-  }
-  localStorage.removeItem('dingusEggs');
+  } catch (e) { console.warn('cloud wipe exception:', e); }
+
+  // 4. Sign out so the cloud cannot auto-restore old state on the next page load.
+  try { if (typeof sb !== 'undefined' && sb && sb.auth) await sb.auth.signOut(); } catch(_) {}
+
+  // 5. Wipe the in-memory `state` so even if something in the unload path tries to push, it pushes empty.
+  try {
+    if (typeof state !== 'undefined') {
+      state.goals = []; state.inventory = []; state.achievements = {};
+      state.smallEggs = 0; state.bigEggs = 0; state.hugeEggs = 0;
+      state.streak = 0; state.goalsCompleted = 0; state.xp = 0; state.level = 1;
+      state.completionLog = {}; state.equipped = { hat: null, weapon: null, pet: null, background: null, vehicle: null, frame: null };
+    }
+  } catch(_) {}
+
+  // 6. Localstorage wipe one more time after signOut (Supabase stores auth tokens here too).
+  try { localStorage.removeItem('dingusEggs'); } catch(_) {}
+
+  // 7. Reload to a fresh first-run state.
   location.reload();
 }
 function showOnboarding() {
@@ -6469,7 +6507,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7-room-backgrounds-doors-steve
+// build-marker: v7.1-big-avatars-reset-fix
 </script>
 </body>
 </html>
