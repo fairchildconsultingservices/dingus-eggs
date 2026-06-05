@@ -2447,8 +2447,7 @@ function load() {
   }
   if (normalizeState()) save();
 }
-// Daily rollover: reset subgoals of daily goals at the start of each new day.
-// Returns true if any state was changed.
+// Daily rollover + inventory cleanup. Returns true if any state was changed.
 function normalizeState() {
   let changed = false;
   const today = todayKey();
@@ -2459,6 +2458,23 @@ function normalizeState() {
       changed = true;
     }
   });
+  // Purge any inventory item that doesn't have a real PNG asset wired up.
+  // Sweeps out old emoji-only items hatched before the asset roll-out.
+  if (Array.isArray(state.inventory)) {
+    const before = state.inventory.length;
+    state.inventory = state.inventory.filter(i => i && i.img);
+    if (state.inventory.length !== before) changed = true;
+  }
+  // Unequip any slot that was pointing at one of those removed items.
+  if (state.equipped) {
+    ['hat','weapon','pet','vehicle','background','frame'].forEach(slot => {
+      const eq = state.equipped[slot];
+      if (eq && !eq.img) {
+        state.equipped[slot] = null;
+        changed = true;
+      }
+    });
+  }
   return changed;
 }
 function mergeDeep(target, source) {
@@ -3932,14 +3948,22 @@ function hatchAllEggs() {
     html += `<div style="margin-bottom:14px;">
       <div class="item-rarity ${r}" style="font-size:0.95em; margin-bottom:6px;">${r} (${items.length})</div>
       <div style="display:flex; flex-wrap:wrap; gap:8px;">`;
-    // Group same items
-    const counts = {};
-    items.forEach(i => { counts[i.n] = (counts[i.n] || 0) + 1; if (!counts['_e_'+i.n]) counts['_e_'+i.n] = i.e; });
-    Object.keys(counts).filter(k => !k.startsWith('_e_')).forEach(name => {
+    // Group same items, remember each one's emoji + image so we can render the right thing.
+    const counts = {}, sample = {};
+    items.forEach(i => {
+      counts[i.n] = (counts[i.n] || 0) + 1;
+      if (!sample[i.n]) sample[i.n] = i;
+    });
+    Object.keys(counts).forEach(name => {
       const ct = counts[name];
-      const e = counts['_e_'+name];
+      const it = sample[name];
+      const visual = it.img
+        ? `<img src="${ASSET_PATH}${it.img}" class="item-img" alt="${escapeHtml(name)}">`
+        : it.svgKey
+          ? accessorySvg(it.svgKey)
+          : `<div class="item-emoji">${it.e}</div>`;
       html += `<div class="item-card ${r}" style="min-width:120px;">
-        <div class="item-emoji">${e}</div>
+        ${visual}
         <div class="item-name">${escapeHtml(name)}${ct > 1 ? ` ×${ct}` : ''}</div>
         <div class="item-rarity ${r}">${r}</div>
       </div>`;
@@ -6665,7 +6689,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v8.2-garage-ground-vehicles
+// build-marker: v8.3-hatchall-art-and-inventory-purge
 </script>
 </body>
 </html>
