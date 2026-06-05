@@ -603,7 +603,35 @@
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
   }
   /* Avatar frame becomes the positioning context for pet (at feet) + weapon (floating beside) */
-  #avatarFrame.avatar-frame { position: relative; width: 100%; max-width: 300px; margin: 0 auto; overflow: visible; }
+  #avatarFrame.avatar-frame { position: relative; width: 100%; max-width: 300px; margin: 0 auto; overflow: visible; border-radius: 12px; }
+
+  /* Equipped background — sits behind the avatar inside the frame */
+  .equipped-bg-layer {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 12px;
+    z-index: 0;
+    display: none;
+  }
+  .equipped-bg-layer.show { display: block; }
+
+  /* Equipped frame overlay — decorative border drawn on top of everything */
+  .equipped-frame-overlay {
+    position: absolute;
+    top: -6%; left: -6%;
+    width: 112%; height: 112%;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 5;
+    display: none;
+  }
+  .equipped-frame-overlay.show { display: block; }
+
+  /* Make sure the avatar img stays above the background layer */
+  .profile-avatar { position: relative; z-index: 1; }
 
   /* Equipped pet — sits at the avatar's feet on the same ground plane, larger companion */
   .equipped-pet {
@@ -1444,10 +1472,12 @@
       <h2>Your Avatar</h2>
       <div class="avatar-display">
         <div class="avatar-frame" id="avatarFrame">
+          <div class="equipped-bg-layer" id="equippedBgLayer"></div>
           <canvas id="avatarCanvas" width="64" height="64" style="display:none;"></canvas>
           <img class="profile-avatar" id="profileAvatar" src="assets/avatar.png" alt="Your avatar">
           <div class="equipped-pet"    id="equippedPetSlot"    title="Equipped pet"></div>
           <div class="equipped-weapon" id="equippedWeaponSlot" title="Equipped weapon"></div>
+          <img class="equipped-frame-overlay" id="equippedFrameImage" alt="">
         </div>
         <div style="width:100%;">
           <div style="display:flex; justify-content:space-between; font-size:0.8em; color:var(--text-dim); margin-bottom:2px;">
@@ -1897,6 +1927,8 @@ const ITEMS = {
     { e: '🪨', n: 'Pebble', d: 'Just a rock', t: 'item' },
     { e: '🍎', n: 'Apple', d: 'Healthy snack', t: 'item' },
     { e: '🐭', n: 'Muddy', d: 'Squishy axolotl with a permanently curious face.', t: 'pet', img: 'creature-common.png' },
+    { e: '🥈', n: 'Silver Frame', d: 'Polished silver border.', t: 'frame', img: 'frame-common.png' },
+    { e: '🌙', n: 'Night Sky Background', d: 'Stars and a crescent moon over drifting clouds.', t: 'background', img: 'bg-night.png' },
     { e: '🐸', n: 'Pet Frog', d: 'Ribbits encouragingly', t: 'pet' },
     { e: '🪙', n: 'Lucky Coin', d: 'A coin for fortune', t: 'item' },
     { e: '🎁', n: 'Mystery Gift', d: 'Looks promising', t: 'item', img: 'object-treasure.png' },
@@ -1920,6 +1952,8 @@ const ITEMS = {
     { e: '🎒', n: 'Backpack', d: 'Carry your dreams', t: 'accessory' },
     { e: '🧣', n: 'Cool Scarf', d: 'Drip incoming', t: 'accessory' },
     { e: '🐱', n: 'Otter', d: 'Snuggly otter that holds your hand while sleeping.', t: 'pet', img: 'creature-uncommon.png' },
+    { e: '🟢', n: 'Emerald Frame', d: 'Glowing emerald-jeweled border.', t: 'frame', img: 'frame-uncommon.png' },
+    { e: '🌻', n: 'Meadow Background', d: 'Sunny rolling hills carpeted in wildflowers.', t: 'background', img: 'bg-meadow.png' },
     { e: '🐶', n: 'Pet Puppy', d: 'Will follow you anywhere', t: 'pet' },
     { e: '🐰', n: 'Pet Rabbit', d: 'Hops with joy', t: 'pet' },
     { e: '🌲', n: 'Forest Background', d: 'Peaceful woods', t: 'background' },
@@ -1946,6 +1980,8 @@ const ITEMS = {
   ],
   rare: [
     { e: '🐺', n: 'Fractal', d: 'A crystal-scaled dragon — geometry given life.', t: 'pet', img: 'creature-rare.png' },
+    { e: '🔵', n: 'Sapphire Frame', d: 'Deep sapphire-jeweled border.', t: 'frame', img: 'frame-rare.png' },
+    { e: '🛏️', n: 'Bedroom Background', d: 'Cozy purple bedroom with warm lamp light.', t: 'background', img: 'bg-bedroom.png' },
     { e: '🦊', n: 'Pet Fox', d: 'Sly and clever', t: 'pet' },
     { e: '🦅', n: 'Pet Eagle', d: 'Soars above your goals', t: 'pet' },
     { e: '⚔️', n: 'Steel Sword', d: 'Battle-tested blade', t: 'weapon', power: 22, img: 'weapon-sword.png' },
@@ -1973,6 +2009,9 @@ const ITEMS = {
   ],
   epic: [
     { e: '🐻', n: 'Griffin', d: 'Half-eagle, half-lion, all golden majesty.', t: 'pet', img: 'creature-epic.png' },
+    { e: '🟣', n: 'Amethyst Frame', d: 'Royal amethyst-jeweled border.', t: 'frame', img: 'frame-epic.png' },
+    { e: '🏪', n: 'Hatchery Background', d: 'The cozy wooden shop where it all begins.', t: 'background', img: 'bg-hatchery.png' },
+    { e: '🏆', n: 'Trophy Hall Background', d: 'A long museum hallway lined with prizes.', t: 'background', img: 'bg-trophy.png' },
     { e: '🦁', n: 'Pet Lion', d: 'King of the jungle', t: 'pet' },
     { e: '🐯', n: 'Pet Tiger', d: 'Majestic predator', t: 'pet' },
     { e: '🦄', n: 'Pet Unicorn', d: 'Magical and rare', t: 'pet' },
@@ -1999,6 +2038,9 @@ const ITEMS = {
   ],
   legendary: [
     { e: '🐉', n: 'Phoenix', d: 'Reborn from ashes daily.', t: 'pet', img: 'creature-legendary.png' },
+    { e: '🟡', n: 'Gold Frame', d: 'Brilliant gold-jeweled border.', t: 'frame', img: 'frame-legendary.png' },
+    { e: '🔧', n: 'Garage Background', d: 'Industrial workshop, tools and parked rides.', t: 'background', img: 'bg-garage.png' },
+    { e: '⚔️', n: 'Colosseum Background', d: 'Sandy arena under the late afternoon sun.', t: 'background', img: 'bg-colosseum.png' },
     { e: '🔱', n: "Poseidon's Trident", d: 'Command the seas', t: 'weapon', power: 52, img: 'weapon-trident.png' },
     { e: '🚁', n: 'Helicopter', d: 'Sky is the limit', t: 'vehicle', img: 'vehicle-helicopter.png' },
     { e: '🛸', n: 'UFO', d: 'Definitely yours now', t: 'vehicle', img: 'vehicle-ufo.png' },
@@ -2022,6 +2064,8 @@ const ITEMS = {
     { e: '✨', n: 'Wish Star', d: 'One wish, anything you want', t: 'item' },
     { e: '⚡', n: "Zeus's Lightning", d: 'Pure divine power', t: 'weapon', power: 78, img: 'weapon-lightning.png' },
     { e: '🔥', n: 'Ninetails', d: 'Mythic nine-tailed fox of shifting rainbow flame.', t: 'pet', img: 'creature-mythic.png' },
+    { e: '🌈', n: 'Rainbow Frame', d: 'Prismatic rainbow-jeweled border — the rarest mount.', t: 'frame', img: 'frame-mythic.png' },
+    { e: '🌌', n: 'Dingus Cosmos Background', d: 'The hero backdrop — pure Dingus Eggs energy.', t: 'background', img: 'mainbackground.png' },
     { e: '🚀', n: 'Personal Rocket', d: 'To the moon, literally', t: 'vehicle', img: 'object-rocket.png' },
     { e: '👁️', n: 'Eye of Providence', d: 'Sees all your future wins', t: 'item' },
     { e: '🪐', n: 'Infinity Stone', d: 'Reality bends to you', t: 'item' },
@@ -2420,6 +2464,8 @@ preloadAssets([
   'tab-goals.png','tab-eggs.png','tab-inventory.png',
   // Every hatchable loot image so they're cached before any hatch
   'creature-common.png','creature-uncommon.png','creature-rare.png','creature-epic.png','creature-legendary.png','creature-mythic.png','rivermon.png',
+  'frame-common.png','frame-uncommon.png','frame-rare.png','frame-epic.png','frame-legendary.png','frame-mythic.png',
+  'bg-night.png','bg-meadow.png','bg-bedroom.png','bg-trophy.png','mainbackground.png',
   'weapon-sword.png','weapon-trident.png','weapon-lightning.png',
   'vehicle-car.png','vehicle-helicopter.png','vehicle-ufo.png',
   'object-rocket.png','object-crown.png','object-wizard-hat.png','object-treasure.png'
@@ -4058,6 +4104,31 @@ function renderEquippedSlots() {
   };
   renderSlot('equippedPetSlot',    state.equipped && state.equipped.pet);
   renderSlot('equippedWeaponSlot', state.equipped && state.equipped.weapon);
+
+  // Equipped background image (sits behind the avatar inside the frame)
+  const bgEl = document.getElementById('equippedBgLayer');
+  if (bgEl) {
+    const bg = state.equipped && state.equipped.background;
+    if (bg && bg.img) {
+      bgEl.style.backgroundImage = `url(${ASSET_PATH}${bg.img})`;
+      bgEl.classList.add('show');
+    } else {
+      bgEl.style.backgroundImage = '';
+      bgEl.classList.remove('show');
+    }
+  }
+  // Equipped frame overlay
+  const frEl = document.getElementById('equippedFrameImage');
+  if (frEl) {
+    const fr = state.equipped && state.equipped.frame;
+    if (fr && fr.img) {
+      frEl.src = ASSET_PATH + fr.img;
+      frEl.classList.add('show');
+    } else {
+      frEl.removeAttribute('src');
+      frEl.classList.remove('show');
+    }
+  }
 }
 
 function applyAvatarFrame() {
@@ -6132,7 +6203,6 @@ function tradeAllDuplicates(itemName) {
   if (!g) return;
   const tradableCount = g.items.length - 1; // keep at least 1
   if (tradableCount < 1) return;
-  if (!confirm(`Trade in ${tradableCount} extra ${g.name}? You'll keep 1 for yourself.`)) return;
 
   const equippedIds = Object.values(state.equipped).filter(Boolean).map(e => e.id);
   // Sort: unequipped first, equipped last (so we keep equipped one)
@@ -6712,7 +6782,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v8.4-creature-renames
+// build-marker: v8.6-no-trade-confirm
 </script>
 </body>
 </html>
