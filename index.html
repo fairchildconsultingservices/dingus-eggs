@@ -5225,24 +5225,24 @@ function drawGarage(ctx, W, H) {
   const order = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
   const vehicles = state.inventory.filter(i => i.t === 'vehicle').sort((a, b) => order[a.rarity] - order[b.rarity]);
 
-  // Two rows: lifts (back, raised) and floor parking (front)
-  const liftY = 200;
-  const floorY = 320;
+  // All vehicles on the floor — no lifts, no pedestals. Two rows for depth if you have many.
+  const backRowY  = 260;
+  const frontRowY = 340;
   const slotsPerRow = 4;
-  const liftItems = vehicles.slice(0, slotsPerRow);
-  const floorItems = vehicles.slice(slotsPerRow, slotsPerRow * 2);
+  const backItems  = vehicles.slice(0, slotsPerRow);
+  const frontItems = vehicles.slice(slotsPerRow, slotsPerRow * 2);
 
   const drawables = [];
-  liftItems.forEach((item, i) => {
+  backItems.forEach((item, i) => {
     drawables.push({
-      y: liftY,
-      draw: () => drawLift(ctx, 100 + i * ((W - 200) / Math.max(1, slotsPerRow - 1)), liftY, item)
+      y: backRowY,
+      draw: () => drawGroundVehicle(ctx, 100 + i * ((W - 200) / Math.max(1, slotsPerRow - 1)), backRowY, item)
     });
   });
-  floorItems.forEach((item, i) => {
+  frontItems.forEach((item, i) => {
     drawables.push({
-      y: floorY,
-      draw: () => drawParkedVehicle(ctx, 110 + i * ((W - 220) / Math.max(1, slotsPerRow - 1)), floorY, item)
+      y: frontRowY,
+      draw: () => drawGroundVehicle(ctx, 110 + i * ((W - 220) / Math.max(1, slotsPerRow - 1)), frontRowY, item)
     });
   });
 
@@ -5898,6 +5898,43 @@ function advanceColosseumRound() {
     m.phase = 'roundpick';
   }
   renderColosseumPhase();
+}
+
+function drawGroundVehicle(ctx, x, y, item) {
+  // Soft ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 22, 38, 7, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Rarity glow underneath for the chase pulls
+  if (['rare','epic','legendary','mythic'].includes(item.rarity)) {
+    const c = rarityColor(item.rarity);
+    ctx.fillStyle = c + '55';
+    ctx.beginPath();
+    ctx.arc(x, y + 4, 44, 0, Math.PI*2);
+    ctx.fill();
+  }
+  // Vehicle PNG if we have art, otherwise just the item name (no emoji)
+  if (item.img && isAssetReady(item.img)) {
+    const img = getAsset(item.img);
+    const h = 86;
+    const w = h * (img.naturalWidth / img.naturalHeight);
+    ctx.drawImage(img, x - w/2, y + 22 - h, w, h);
+  } else {
+    ctx.fillStyle = '#eee';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.n, x, y);
+  }
+  // Label
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(x - 42, y + 28, 84, 13);
+  ctx.fillStyle = rarityColor(item.rarity);
+  ctx.font = 'bold 8px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(item.n.length > 14 ? item.n.slice(0,13)+'…' : item.n, x, y + 34);
 }
 
 function drawParkedVehicle(ctx, x, y, item) {
@@ -6628,7 +6665,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v8.1-rivermon-pet
+// build-marker: v8.2-garage-ground-vehicles
 </script>
 </body>
 </html>
