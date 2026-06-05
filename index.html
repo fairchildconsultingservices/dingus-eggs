@@ -592,27 +592,27 @@
   /* HUD inline icons */
   .btn-icon { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; display: inline-block; }
   .tab-icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 5px; display: inline-block; object-fit: contain; }
-  /* Static profile avatar */
+  /* Static profile avatar — fills the frame */
   .profile-avatar {
     display: block;
     width: 100%;
-    max-width: 220px;
+    max-width: 100%;
     height: auto;
     margin: 0 auto;
     object-fit: contain;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
   }
   /* Avatar frame becomes the positioning context for pet (at feet) + weapon (floating beside) */
-  #avatarFrame.avatar-frame { position: relative; width: 100%; max-width: 240px; margin: 0 auto; overflow: visible; }
+  #avatarFrame.avatar-frame { position: relative; width: 100%; max-width: 300px; margin: 0 auto; overflow: visible; }
 
-  /* Equipped pet — sits at the avatar's feet, slightly off-center, overlapping bottom ~15% */
+  /* Equipped pet — sits at the avatar's feet on the same ground plane, larger companion */
   .equipped-pet {
     position: absolute;
     left: 50%;
-    bottom: 0;
-    transform: translate(-15%, 18%);
-    width: 32%;
-    height: 32%;
+    bottom: 6%;
+    transform: translateX(-18%);
+    width: 44%;
+    height: 44%;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -2036,6 +2036,7 @@ const ITEMS = {
     { e: '🗿', n: 'Moai Sentinel', d: 'Stares into your soul', t: 'item' },
     { e: '🌈', n: 'Rainbow Bridge Background', d: 'Connects all realms', t: 'background' },
     { e: '🌙', n: 'Moonraker Staff', d: 'Pulls power from the moon itself.', t: 'weapon', power: 83 },
+    { e: '🐉', n: 'Pet Rivermon', d: "The legendary pink dragon-mon — Ducky's loyal companion.", t: 'pet', img: 'rivermon.png' },
   ]
 };
 
@@ -2418,7 +2419,7 @@ preloadAssets([
   'icon-add.png','icon-edit.png','icon-delete.png','icon-settings.png','icon-close.png','icon-undo.png',
   'tab-goals.png','tab-eggs.png','tab-inventory.png',
   // Every hatchable loot image so they're cached before any hatch
-  'creature-common.png','creature-uncommon.png','creature-rare.png','creature-epic.png','creature-legendary.png','creature-mythic.png',
+  'creature-common.png','creature-uncommon.png','creature-rare.png','creature-epic.png','creature-legendary.png','creature-mythic.png','rivermon.png',
   'weapon-sword.png','weapon-trident.png','weapon-lightning.png',
   'vehicle-car.png','vehicle-helicopter.png','vehicle-ufo.png',
   'object-rocket.png','object-crown.png','object-wizard-hat.png','object-treasure.png'
@@ -6627,7 +6628,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7.9-avatar-companion-layout
+// build-marker: v8.1-rivermon-pet
 </script>
 </body>
 </html>
