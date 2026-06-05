@@ -1520,12 +1520,12 @@
       <div class="inv-tabs" id="invTabs">
         <button class="inv-tab active" data-cat="all">All</button>
         <button class="inv-tab" data-cat="pet">🐾 Pets</button>
-        <button class="inv-tab" data-cat="accessory">🎩 Accessories</button>
+        <button class="inv-tab" data-cat="accessory" style="display:none;">🎩 Accessories</button>
         <button class="inv-tab" data-cat="weapon">⚔️ Weapons</button>
         <button class="inv-tab" data-cat="vehicle">🚀 Vehicles</button>
         <button class="inv-tab" data-cat="background">🌄 Backgrounds</button>
         <button class="inv-tab" data-cat="frame">🖼️ Frames</button>
-        <button class="inv-tab" data-cat="item">✨ Misc</button>
+        <button class="inv-tab" data-cat="item" style="display:none;">✨ Misc</button>
       </div>
       <div id="inventoryList" class="inv-grid">
         <div class="empty-state">Hatch some eggs to see what you got!</div>
@@ -1972,15 +1972,19 @@ const ITEMS = {
   ]
 };
 
-// Strip the loot pool down to items that have a real PNG asset.
-// Items without an `img` field are excluded from future hatches.
-// (Existing inventory items keep their emoji rendering — only the roll pool shrinks.)
+// Strip the loot pool down to items that:
+//   1. have a real PNG asset (item.img set), AND
+//   2. are NOT type "accessory" or "item" — those two categories were removed from the game.
+// Existing inventory items in either category stay (player keeps what they hatched),
+// but no future rolls can produce them.
 Object.keys(ITEMS).forEach(rarity => {
-  const filtered = ITEMS[rarity].filter(item => item.img);
+  const filtered = ITEMS[rarity].filter(item =>
+    item.img && item.t !== 'accessory' && item.t !== 'item'
+  );
   if (filtered.length > 0) {
     ITEMS[rarity] = filtered;
   } else {
-    console.warn(`No items with img in tier "${rarity}" — keeping originals to avoid empty pool.`);
+    console.warn(`No items left in tier "${rarity}" after filters — keeping originals to avoid empty pool.`);
   }
 });
 
@@ -6525,7 +6529,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v7.4-egg-preload-fix
+// build-marker: v7.5-remove-accessories-items
 </script>
 </body>
 </html>
