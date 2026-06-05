@@ -4689,9 +4689,15 @@ function drawWarehouse() {
 }
 
 function drawWarehouseBackground(ctx, W, H) {
-  // Use the illustrated hatchery background when no themed background is equipped.
-  if (!state.equipped.background && isAssetReady('bg-hatchery.png')) {
-    const img = getAsset('bg-hatchery.png');
+  // Decide which background image to paint:
+  //   1. If the player has a background equipped that has its own art, use that.
+  //   2. Otherwise default to bg-hatchery.png.
+  let bgFile = 'bg-hatchery.png';
+  if (state.equipped.background && state.equipped.background.img) {
+    bgFile = state.equipped.background.img;
+  }
+  if (isAssetReady(bgFile)) {
+    const img = getAsset(bgFile);
     // "Cover" — fill the canvas while preserving the image's aspect ratio, center-crop any overflow.
     const ir = img.naturalWidth / img.naturalHeight;
     const cr = W / H;
@@ -6783,7 +6789,7 @@ if (sb) {
 if (!state.settings.seenOnboarding) {
   setTimeout(showOnboarding, 400);
 }
-// build-marker: v8.7-frame-fit
+// build-marker: v8.8-bg-equipped-priority
 </script>
 </body>
 </html>
