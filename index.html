@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dingus Eggs - Goal Tracker</title>
+<!-- iOS home-screen icon (used when you "Add to Home Screen" from Safari) -->
+<link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon.png">
+<link rel="icon" type="image/png" href="assets/app-icon.png">
+<meta name="apple-mobile-web-app-title" content="Dingus Eggs">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
@@ -870,6 +877,39 @@
     border-radius: 4px;
     font-family: inherit;
     text-align: center;
+  }
+  /* Manual log row */
+  .focus-manual {
+    display: grid;
+    grid-template-columns: 1fr 90px 150px 130px auto;
+    gap: 8px;
+    align-items: center;
+    padding: 12px;
+    background: var(--panel-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  .focus-manual input, .focus-manual button {
+    padding: 8px 10px;
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9em;
+  }
+  .focus-manual button {
+    background: var(--gold);
+    color: #1a1a1a;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .focus-manual button:hover { filter: brightness(1.1); }
+  @media (max-width: 700px) {
+    .focus-manual { grid-template-columns: 1fr; }
   }
   .focus-log {
     max-height: 420px;
@@ -1772,6 +1812,15 @@
           <label>Work min: <input type="number" id="focusWorkMins" value="25" min="1" max="240" onchange="focusSettingsChanged()"></label>
         </div>
       </div>
+      <h3 style="margin-top: 24px;">Log Time Manually</h3>
+      <div class="focus-manual">
+        <input type="text" id="manualAction" placeholder="What did you work on?" maxlength="100">
+        <input type="number" id="manualMinutes" placeholder="Min" min="1" max="600">
+        <input type="date" id="manualDate">
+        <input type="time" id="manualTime">
+        <button onclick="focusLogManual()">+ Add Entry</button>
+      </div>
+
       <h3 style="margin-top: 24px;">Session Log</h3>
       <div class="focus-log" id="focusLog"></div>
       <div class="focus-export" style="margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end;">
@@ -6921,6 +6970,62 @@ function focusTabActivate() {
   if (!focusInterval && !focusCurrentSession) {
     focusUpdateDisplay(state.focusConfig.workMinutes * 60);
   }
+  // Default manual-entry date+time fields to "now"
+  const now = new Date();
+  const dateInput = document.getElementById('manualDate');
+  const timeInput = document.getElementById('manualTime');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = now.toISOString().slice(0, 10);
+  }
+  if (timeInput && !timeInput.value) {
+    timeInput.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  }
+  renderFocusLog();
+}
+
+function focusLogManual() {
+  focusEnsureState();
+  const actionEl = document.getElementById('manualAction');
+  const minsEl   = document.getElementById('manualMinutes');
+  const dateEl   = document.getElementById('manualDate');
+  const timeEl   = document.getElementById('manualTime');
+  const action = (actionEl.value || '').trim();
+  const mins   = parseInt(minsEl.value);
+  if (!action) { toast('What were you working on?'); actionEl.focus(); return; }
+  if (!mins || mins < 1) { toast('Enter how many minutes you worked.'); minsEl.focus(); return; }
+  // Build the timestamp from the date+time inputs (falling back to now if either is blank)
+  let when;
+  try {
+    const dateStr = dateEl.value || new Date().toISOString().slice(0, 10);
+    const timeStr = timeEl.value || '12:00';
+    when = new Date(dateStr + 'T' + timeStr);
+    if (isNaN(when.getTime())) when = new Date();
+  } catch(_) { when = new Date(); }
+  const session = {
+    action,
+    startedAt: when.toISOString(),
+    targetMinutes: mins,
+    elapsedSeconds: mins * 60,
+    completed: true,
+    manual: true
+  };
+  state.focusSessions.unshift(session);
+  // Same egg reward as timed sessions: 1 huge egg per 15 min logged
+  const eggsEarned = Math.floor(mins / 15);
+  if (eggsEarned > 0) {
+    state.hugeEggs = (state.hugeEggs || 0) + eggsEarned;
+    toast(`Logged. +${eggsEarned} 🥚 Huge Egg${eggsEarned > 1 ? 's' : ''} earned (${mins} min)`);
+    if (typeof playSound === 'function') playSound('complete');
+    if (state.settings && state.settings.fx && typeof burstConfetti === 'function') burstConfetti();
+  } else {
+    toast(`Logged ${mins}m — get to 15 min for a Huge Egg.`);
+  }
+  // Clear the form (keep the date so back-to-back entries don't re-type it)
+  actionEl.value = '';
+  minsEl.value = '';
+  save();
+  if (typeof renderStats === 'function') renderStats();
+  if (typeof renderEggs === 'function') renderEggs();
   renderFocusLog();
 }
 
@@ -7107,7 +7212,7 @@ function focusDownload(content, filename, mime) {
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
 }
 
-// build-marker: v9-focus-timer-and-simple-mode
+// build-marker: v9.2-manual-focus-logging
 </script>
 </body>
 </html>
