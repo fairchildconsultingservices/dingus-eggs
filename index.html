@@ -3058,12 +3058,42 @@ function normalizeState() {
       changed = true;
     }
   });
+  // Phase 9.5: run art/frame migrations on EVERY state load — including the
+  // async cloud merge, which previously resurrected retired PNG frames.
+  if (migrateFrames()) changed = true;
+  if (migrateWeaponArt()) changed = true;
   // Purge any inventory item that doesn't have a real PNG asset wired up.
   // Sweeps out old emoji-only items hatched before the asset roll-out.
+  // CSS-class frames (Aurora, the gem frames, etc.) have NO png by design — keep them!
   if (Array.isArray(state.inventory)) {
     const before = state.inventory.length;
-    state.inventory = state.inventory.filter(i => i && i.img);
+    state.inventory = state.inventory.filter(i => i && (i.img || (i.t === 'frame' && i.frameClass)));
     if (state.inventory.length !== before) changed = true;
+  }
+  // Self-heal frames this purge wrongly deleted in earlier builds:
+  //  - Aurora Frame: deterministic — mythic dex milestone claimed means exactly one was granted.
+  //  - Migrated gem frames: dex remembers them; restore a copy if none is held.
+  if (Array.isArray(state.inventory)) {
+    const holds = (n) => state.inventory.some(i => i && i.n === n) ||
+      (state.equipped && state.equipped.frame && state.equipped.frame.n === n);
+    if (state.dexMilestones && state.dexMilestones.mythic && !holds('Aurora Frame')) {
+      state.inventory.push({ e: '🌌', n: 'Aurora Frame', d: 'Dingusdex exclusive — proof you hatched them all.', t: 'frame', frameClass: 'aurora', rarity: 'mythic', id: Date.now() + Math.random() });
+      changed = true;
+    }
+    const GEM_RESTORE = [
+      { n: 'Moonstone Frame', e: '🌙', frameClass: 'moonstone', rarity: 'common',    d: 'Soft pearlescent shimmer.' },
+      { n: 'Emerald Frame',   e: '🟢', frameClass: 'emerald',   rarity: 'uncommon',  d: 'Glowing emerald-jeweled border.' },
+      { n: 'Sapphire Frame',  e: '🔵', frameClass: 'sapphire',  rarity: 'rare',      d: 'Deep sapphire-jeweled border.' },
+      { n: 'Amethyst Frame',  e: '🟣', frameClass: 'amethyst',  rarity: 'epic',      d: 'Royal amethyst-jeweled border.' },
+      { n: 'Sunforge Frame',  e: '🌅', frameClass: 'sunforge',  rarity: 'legendary', d: 'Molten gold, forged from a sunrise.' },
+      { n: 'Rainbow Frame',   e: '🌈', frameClass: 'rainbow',   rarity: 'mythic',    d: 'Prismatic rainbow-jeweled border — the rarest mount.' }
+    ];
+    GEM_RESTORE.forEach(f => {
+      if (state.dex && state.dex[f.n] > 0 && !holds(f.n)) {
+        state.inventory.push({ ...f, t: 'frame', id: Date.now() + Math.random() });
+        changed = true;
+      }
+    });
   }
   // Migrate creature names: old hatches stored "Pet Mouse" etc. Rename them
   // based on the image they're tied to so old and new pets match.
@@ -3089,10 +3119,11 @@ function normalizeState() {
     });
   }
   // Unequip any slot that was pointing at one of those removed items.
+  // (CSS-class frames are legitimate img-less items — never unequip those.)
   if (state.equipped) {
     ['hat','weapon','pet','vehicle','background','frame'].forEach(slot => {
       const eq = state.equipped[slot];
-      if (eq && !eq.img) {
+      if (eq && !eq.img && !(eq.t === 'frame' && eq.frameClass)) {
         state.equipped[slot] = null;
         changed = true;
       }
@@ -5417,9 +5448,11 @@ const WEAPON_ART_BACKFILL = {
   'Goosefeather Glaive': 'weapon-glaive.png'
 };
 function migrateWeaponArt() {
+  let changed = false;
   (state.inventory || []).forEach(i => {
-    if (!i.img && WEAPON_ART_BACKFILL[i.n]) i.img = WEAPON_ART_BACKFILL[i.n];
+    if (!i.img && WEAPON_ART_BACKFILL[i.n]) { i.img = WEAPON_ART_BACKFILL[i.n]; changed = true; }
   });
+  return changed;
 }
 
 // Phase 9.1: the PNG asset frames never rendered cleanly (bad extractions) and are
@@ -5433,6 +5466,7 @@ const FRAME_MIGRATION = {
   'frame-mythic.png':    { n: 'Rainbow Frame',   e: '🌈', frameClass: 'rainbow',   d: 'Prismatic rainbow-jeweled border — the rarest mount.' }
 };
 function migrateFrames() {
+  let changed = false;
   const convert = (item) => {
     if (!item || item.t !== 'frame' || !item.img) return;
     const repl = FRAME_MIGRATION[item.img];
@@ -5440,6 +5474,7 @@ function migrateFrames() {
     const oldName = item.n;
     delete item.img;
     item.n = repl.n; item.e = repl.e; item.frameClass = repl.frameClass; item.d = repl.d;
+    changed = true;
     // Keep the Dingusdex consistent when the frame was renamed
     if (oldName !== repl.n && state.dex && state.dex[oldName]) {
       state.dex[repl.n] = (state.dex[repl.n] || 0) + state.dex[oldName];
@@ -5447,6 +5482,7 @@ function migrateFrames() {
   };
   (state.inventory || []).forEach(convert);
   if (state.equipped && state.equipped.frame) convert(state.equipped.frame);
+  return changed;
 }
 
 // Weapon art in Colosseum cards/reveals — real PNG when the item has one, emoji otherwise
