@@ -185,6 +185,86 @@
     0% { background-position: 0% 50%; }
     100% { background-position: 400% 50%; }
   }
+  /* ===== Phase 9.1 animated gem frames (replace retired PNG frames) ===== */
+  .avatar-frame.frame-moonstone {
+    padding: 10px;
+    border: 4px solid transparent;
+    background: linear-gradient(135deg, #e8e6f0, #b9c4d8, #f5f3fa, #cfd8e8) border-box;
+    background-size: 250% 250%;
+    box-shadow: 0 0 12px rgba(220, 225, 245, 0.55), inset 0 0 8px rgba(0,0,0,0.25);
+    animation: moonstoneSheen 6s infinite ease-in-out alternate;
+  }
+  @keyframes moonstoneSheen {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+  }
+  .avatar-frame.frame-emerald {
+    padding: 10px;
+    border: 4px solid transparent;
+    background: linear-gradient(135deg, #0e5c3a, #2ecc71, #0e5c3a, #7bf1b0) border-box;
+    background-size: 250% 250%;
+    box-shadow: 0 0 14px rgba(46, 204, 113, 0.5), inset 0 0 8px rgba(0,0,0,0.3);
+    animation: emeraldPulse 4s infinite ease-in-out alternate;
+  }
+  @keyframes emeraldPulse {
+    0% { background-position: 0% 50%; box-shadow: 0 0 12px rgba(46,204,113,0.4), inset 0 0 8px rgba(0,0,0,0.3); }
+    100% { background-position: 100% 50%; box-shadow: 0 0 20px rgba(46,204,113,0.7), inset 0 0 8px rgba(0,0,0,0.3); }
+  }
+  .avatar-frame.frame-sapphire {
+    padding: 10px;
+    border: 4px solid transparent;
+    background: linear-gradient(160deg, #0a2a6b, #2980b9, #0a2a6b, #6fc3ff) border-box;
+    background-size: 250% 250%;
+    box-shadow: 0 0 16px rgba(41, 128, 185, 0.55), inset 0 0 9px rgba(0,0,0,0.35);
+    animation: sapphireDepth 5s infinite ease-in-out alternate;
+  }
+  @keyframes sapphireDepth {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+  }
+  .avatar-frame.frame-amethyst {
+    padding: 10px;
+    border: 4px solid transparent;
+    background: linear-gradient(135deg, #4a1a6b, #9b59b6, #4a1a6b, #d6a3ff) border-box;
+    background-size: 250% 250%;
+    box-shadow: 0 0 18px rgba(155, 89, 182, 0.6), inset 0 0 10px rgba(0,0,0,0.35);
+    animation: amethystRoyal 4.5s infinite ease-in-out alternate;
+  }
+  @keyframes amethystRoyal {
+    0% { background-position: 0% 50%; box-shadow: 0 0 14px rgba(155,89,182,0.45), inset 0 0 10px rgba(0,0,0,0.35); }
+    100% { background-position: 100% 50%; box-shadow: 0 0 24px rgba(214,163,255,0.7), inset 0 0 10px rgba(0,0,0,0.35); }
+  }
+  .avatar-frame.frame-sunforge {
+    padding: 10px;
+    border: 4px solid transparent;
+    background: linear-gradient(120deg, #c9a000, #ffd700, #ff9d3a, #ffd700, #c9a000) border-box;
+    background-size: 300% 300%;
+    box-shadow: 0 0 22px rgba(255, 215, 0, 0.6), inset 0 0 10px rgba(120, 60, 0, 0.4);
+    animation: sunforgeMolten 3.5s infinite ease-in-out alternate;
+  }
+  @keyframes sunforgeMolten {
+    0% { background-position: 0% 50%; box-shadow: 0 0 16px rgba(255,215,0,0.5), inset 0 0 10px rgba(120,60,0,0.4); }
+    100% { background-position: 100% 50%; box-shadow: 0 0 28px rgba(255,160,60,0.75), inset 0 0 12px rgba(120,60,0,0.4); }
+  }
+  .avatar-frame.frame-rainbow {
+    padding: 10px;
+    border: 4px solid transparent;
+    background: linear-gradient(90deg, #ff5959, #ffb347, #ffe066, #6fe07f, #5fc9ff, #b08aff, #ff7ad9, #ff5959) border-box;
+    background-size: 350% 350%;
+    box-shadow: 0 0 26px rgba(255, 255, 255, 0.45), inset 0 0 12px rgba(0,0,0,0.35);
+    animation: rainbowFlow 5s infinite linear;
+  }
+  @keyframes rainbowFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 350% 50%; }
+  }
+  /* Mini frame preview used on inventory + dex cards */
+  .frame-chip {
+    width: 46px;
+    height: 46px;
+    margin: 0 auto;
+    border-radius: 10px;
+  }
   .avatar-frame.frame-aurora {
     padding: 10px;
     border: 4px solid transparent;
@@ -475,6 +555,7 @@
   .ladder-row.won { border-color: var(--green); }
   .ladder-row.locked { opacity: 0.55; }
   .ladder-emoji { font-size: 2em; }
+  .ladder-portrait { height: 64px; max-width: 52px; object-fit: contain; flex-shrink: 0; }
   .ladder-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
   .ladder-taunt { font-size: 0.8em; color: var(--text-dim); font-style: italic; }
   .ladder-meta { font-size: 0.75em; color: var(--gold-soft); }
@@ -2298,7 +2379,7 @@ const ITEMS = {
     { e: '🪨', n: 'Pebble', d: 'Just a rock', t: 'item' },
     { e: '🍎', n: 'Apple', d: 'Healthy snack', t: 'item' },
     { e: '🐭', n: 'Muddy', d: 'Squishy axolotl with a permanently curious face.', t: 'pet', img: 'creature-common.png' },
-    { e: '🥈', n: 'Silver Frame', d: 'Polished silver border.', t: 'frame', img: 'frame-common.png' },
+    { e: '🌙', n: 'Moonstone Frame', d: 'Soft pearlescent shimmer.', t: 'frame', frameClass: 'moonstone' },
     { e: '🌙', n: 'Night Sky Background', d: 'Stars and a crescent moon over drifting clouds.', t: 'background', img: 'bg-night.png' },
     { e: '🐸', n: 'Pet Frog', d: 'Ribbits encouragingly', t: 'pet' },
     { e: '🪙', n: 'Lucky Coin', d: 'A coin for fortune', t: 'item' },
@@ -2323,7 +2404,7 @@ const ITEMS = {
     { e: '🎒', n: 'Backpack', d: 'Carry your dreams', t: 'accessory' },
     { e: '🧣', n: 'Cool Scarf', d: 'Drip incoming', t: 'accessory' },
     { e: '🐱', n: 'Otter', d: 'Snuggly otter that holds your hand while sleeping.', t: 'pet', img: 'creature-uncommon.png' },
-    { e: '🟢', n: 'Emerald Frame', d: 'Glowing emerald-jeweled border.', t: 'frame', img: 'frame-uncommon.png' },
+    { e: '🟢', n: 'Emerald Frame', d: 'Glowing emerald-jeweled border.', t: 'frame', frameClass: 'emerald' },
     { e: '🌻', n: 'Meadow Background', d: 'Sunny rolling hills carpeted in wildflowers.', t: 'background', img: 'bg-meadow.png' },
     { e: '🐶', n: 'Pet Puppy', d: 'Will follow you anywhere', t: 'pet' },
     { e: '🐰', n: 'Pet Rabbit', d: 'Hops with joy', t: 'pet' },
@@ -2351,7 +2432,7 @@ const ITEMS = {
   ],
   rare: [
     { e: '🐺', n: 'Fractal', d: 'A crystal-scaled dragon — geometry given life.', t: 'pet', img: 'creature-rare.png' },
-    { e: '🔵', n: 'Sapphire Frame', d: 'Deep sapphire-jeweled border.', t: 'frame', img: 'frame-rare.png' },
+    { e: '🔵', n: 'Sapphire Frame', d: 'Deep sapphire-jeweled border.', t: 'frame', frameClass: 'sapphire' },
     { e: '🛏️', n: 'Bedroom Background', d: 'Cozy purple bedroom with warm lamp light.', t: 'background', img: 'bg-bedroom.png' },
     { e: '🦊', n: 'Pet Fox', d: 'Sly and clever', t: 'pet' },
     { e: '🦅', n: 'Pet Eagle', d: 'Soars above your goals', t: 'pet' },
@@ -2380,7 +2461,7 @@ const ITEMS = {
   ],
   epic: [
     { e: '🐻', n: 'Griffin', d: 'Half-eagle, half-lion, all golden majesty.', t: 'pet', img: 'creature-epic.png' },
-    { e: '🟣', n: 'Amethyst Frame', d: 'Royal amethyst-jeweled border.', t: 'frame', img: 'frame-epic.png' },
+    { e: '🟣', n: 'Amethyst Frame', d: 'Royal amethyst-jeweled border.', t: 'frame', frameClass: 'amethyst' },
     { e: '🏪', n: 'Hatchery Background', d: 'The cozy wooden shop where it all begins.', t: 'background', img: 'bg-hatchery.png' },
     { e: '🏆', n: 'Trophy Hall Background', d: 'A long museum hallway lined with prizes.', t: 'background', img: 'bg-trophy.png' },
     { e: '🦁', n: 'Pet Lion', d: 'King of the jungle', t: 'pet' },
@@ -2409,7 +2490,7 @@ const ITEMS = {
   ],
   legendary: [
     { e: '🐉', n: 'Phoenix', d: 'Reborn from ashes daily.', t: 'pet', img: 'creature-legendary.png' },
-    { e: '🟡', n: 'Gold Frame', d: 'Brilliant gold-jeweled border.', t: 'frame', img: 'frame-legendary.png' },
+    { e: '🌅', n: 'Sunforge Frame', d: 'Molten gold, forged from a sunrise.', t: 'frame', frameClass: 'sunforge' },
     { e: '🔧', n: 'Garage Background', d: 'Industrial workshop, tools and parked rides.', t: 'background', img: 'bg-garage.png' },
     { e: '⚔️', n: 'Colosseum Background', d: 'Sandy arena under the late afternoon sun.', t: 'background', img: 'bg-colosseum.png' },
     { e: '🔱', n: "Poseidon's Trident", d: 'Command the seas', t: 'weapon', power: 52, img: 'weapon-trident.png' },
@@ -2435,7 +2516,7 @@ const ITEMS = {
     { e: '✨', n: 'Wish Star', d: 'One wish, anything you want', t: 'item' },
     { e: '⚡', n: "Zeus's Lightning", d: 'Pure divine power', t: 'weapon', power: 78, img: 'weapon-lightning.png' },
     { e: '🔥', n: 'Ninetails', d: 'Mythic nine-tailed fox of shifting rainbow flame.', t: 'pet', img: 'creature-mythic.png' },
-    { e: '🌈', n: 'Rainbow Frame', d: 'Prismatic rainbow-jeweled border — the rarest mount.', t: 'frame', img: 'frame-mythic.png' },
+    { e: '🌈', n: 'Rainbow Frame', d: 'Prismatic rainbow-jeweled border — the rarest mount.', t: 'frame', frameClass: 'rainbow' },
     { e: '🌌', n: 'Dingus Cosmos Background', d: 'The hero backdrop — pure Dingus Eggs energy.', t: 'background', img: 'mainbackground.png' },
     { e: '🚀', n: 'Personal Rocket', d: 'To the moon, literally', t: 'vehicle', img: 'object-rocket.png' },
     { e: '👁️', n: 'Eye of Providence', d: 'Sees all your future wins', t: 'item' },
@@ -2462,7 +2543,7 @@ const ITEMS = {
 // but no future rolls can produce them.
 Object.keys(ITEMS).forEach(rarity => {
   const filtered = ITEMS[rarity].filter(item =>
-    item.img && item.t !== 'accessory' && item.t !== 'item'
+    (item.img || (item.t === 'frame' && item.frameClass)) && item.t !== 'accessory' && item.t !== 'item'
   );
   if (filtered.length > 0) {
     ITEMS[rarity] = filtered;
@@ -2593,6 +2674,17 @@ function petGainXP(amount) {
   }
 }
 
+// Stage-specific art file for a pet. Hatchling = base art; Adult/Radiant use the
+// Phase 9 evolution renders (e.g. creature-rare-adult.png). Falls back to base art
+// if the evolution file isn't loaded/present.
+function petStageImg(item) {
+  if (!item || !item.img || item.t !== 'pet') return item && item.img;
+  const stage = petStageIndex(item.n);
+  if (stage === 0) return item.img;
+  const file = item.img.replace(/\.png$/, (stage === 1 ? '-adult' : '-radiant') + '.png');
+  return isAssetReady(file) ? file : item.img;
+}
+
 function drawPetSprite(ctx, cx, cy, item, scale) {
   scale = scale || 1;
   const stage = item.t === 'pet' ? petStageIndex(item.n) : 0;
@@ -2608,9 +2700,10 @@ function drawPetSprite(ctx, cx, cy, item, scale) {
       ctx.restore();
     }
   }
-  // Draw the real hatched asset when available (fixes the emoji-only Hatchery pet)
-  if (item.img) {
-    const img = getAsset(item.img);
+  // Draw the real hatched asset (stage-specific when evolved)
+  const artFile = petStageImg(item);
+  if (artFile) {
+    const img = getAsset(artFile);
     if (img && img.complete && img.naturalWidth > 0) {
       const h = size * 1.4;
       const w = h * (img.naturalWidth / img.naturalHeight);
@@ -2897,6 +2990,16 @@ function isAssetReady(filename) {
 preloadAssets([
   'logo.png',
   'avatar.png','avatar-sword-steve.png',
+  // Phase 9 art
+  'avatar-shield-sharon.png','avatar-axe-axel.png','avatar-twinblade-tina.png','avatar-grandmaster-goose.png',
+  'weapon-excalibur.png','weapon-aegis.png','weapon-worldsplitter.png','weapon-twinfangs.png','weapon-glaive.png',
+  'creature-common-adult.png','creature-common-radiant.png',
+  'creature-uncommon-adult.png','creature-uncommon-radiant.png',
+  'creature-rare-adult.png','creature-rare-radiant.png',
+  'creature-epic-adult.png','creature-epic-radiant.png',
+  'creature-legendary-adult.png','creature-legendary-radiant.png',
+  'creature-mythic-adult.png','creature-mythic-radiant.png',
+  'rivermon-adult.png','rivermon-radiant.png',
   'bg-hatchery.png','bg-trophy.png','bg-colosseum.png','bg-garage.png',
   'door-trophy.png','door-colosseum.png','door-garage.png',
   'ducky-idle.png','ducky-cheer.png','ducky-market.png',
@@ -2904,11 +3007,11 @@ preloadAssets([
   'egg-stage-1.png','egg-stage-2.png','egg-stage-3.png',
   'hatch-burst.png','light-ring.png',
   'aura-common.png','aura-uncommon.png','aura-rare.png','aura-epic.png','aura-legendary.png','aura-mythic.png',
+  // frame-*.png PNG frames retired in Phase 9.1 — replaced by animated CSS frames
   'icon-add.png','icon-edit.png','icon-delete.png','icon-settings.png','icon-close.png','icon-undo.png',
   'tab-goals.png','tab-eggs.png','tab-inventory.png',
   // Every hatchable loot image so they're cached before any hatch
   'creature-common.png','creature-uncommon.png','creature-rare.png','creature-epic.png','creature-legendary.png','creature-mythic.png','rivermon.png',
-  'frame-common.png','frame-uncommon.png','frame-rare.png','frame-epic.png','frame-legendary.png','frame-mythic.png',
   'bg-night.png','bg-meadow.png','bg-bedroom.png','bg-trophy.png','mainbackground.png',
   'weapon-sword.png','weapon-trident.png','weapon-lightning.png',
   'vehicle-car.png','vehicle-helicopter.png','vehicle-ufo.png',
@@ -4516,6 +4619,8 @@ function showHatch(item, size) {
     // handles loading and an onerror catches the rare case of a missing file.
     if (item.img) {
       emoji.innerHTML = `<img src="${ASSET_PATH}${item.img}" class="modal-item-img" alt="${escapeHtml(item.n || '')}">`;
+    } else if (item.t === 'frame' && item.frameClass) {
+      emoji.innerHTML = `<div class="avatar-frame frame-${item.frameClass} frame-chip" style="width:90px; height:90px;"></div>`;
     } else if (item.svgKey) {
       emoji.innerHTML = accessorySvg(item.svgKey, 'modal-large');
     } else {
@@ -4754,7 +4859,9 @@ function renderDex() {
       const owned = count > 0;
       const art = item.img
         ? `<img src="${ASSET_PATH}${item.img}" alt="">`
-        : `<span>${item.e}</span>`;
+        : (item.t === 'frame' && item.frameClass)
+          ? `<div class="avatar-frame frame-${item.frameClass} frame-chip"></div>`
+          : `<span>${item.e}</span>`;
       return `<div class="dex-card ${rarity} ${owned ? 'owned' : 'locked'}">
         ${count > 1 ? `<span class="dex-count">×${count}</span>` : ''}
         <div class="dex-art">${art}</div>
@@ -4907,7 +5014,7 @@ function renderInventory() {
     }
     return `
     <div class="item-card ${item.rarity} ${isEquipped ? 'equipped' : ''}" onclick="equipItem('${item.id}')">
-      ${item.img ? `<img src="${ASSET_PATH}${item.img}" class="item-img" alt="${escapeHtml(item.n)}">` : item.svgKey ? accessorySvg(item.svgKey) : `<div class="item-emoji">${item.e}</div>`}
+      ${item.img ? `<img src="${ASSET_PATH}${item.t === 'pet' ? petStageImg(item) : item.img}" class="item-img" alt="${escapeHtml(item.n)}">` : (item.t === 'frame' && item.frameClass) ? `<div class="avatar-frame frame-${item.frameClass} frame-chip"></div>` : item.svgKey ? accessorySvg(item.svgKey) : `<div class="item-emoji">${item.e}</div>`}
       <div class="item-name">${escapeHtml(item.n)}</div>
       <div class="item-rarity ${item.rarity}">${item.rarity}</div>
       ${petLine}
@@ -5203,7 +5310,7 @@ const SWORD_STEVE = {
     { e: '⚔️', n: "Iron Sword",     power: 14, rarity: 'uncommon',  t: 'weapon' },
     { e: '🗡️', n: "Steel Sword",    power: 22, rarity: 'rare',      t: 'weapon' },
     { e: '⚔️', n: "Greatsword",     power: 32, rarity: 'epic',      t: 'weapon' },
-    { e: '🗡️', n: "Excalibur",      power: 55, rarity: 'legendary', t: 'weapon' }
+    { e: '🗡️', n: "Excalibur",      power: 55, rarity: 'legendary', t: 'weapon', img: 'weapon-excalibur.png' }
   ]
 };
 
@@ -5221,59 +5328,114 @@ const WAGER_POWER_CAPS = {
 const LADDER_RIVALS = [
   {
     id: 'steve', name: 'Sword Steve', short: 'STEVE', e: '🧙‍♂️', xp: 50, feathers: 2,
+    img: 'avatar-sword-steve.png',
     taunt: 'The classic. Splintery but spirited.',
     arsenal: SWORD_STEVE.arsenal,
-    drop: { e: '🗡️', n: 'Excalibur', d: "Steve's legendary blade — won by victory", t: 'weapon', power: 55, rarity: 'legendary' }
+    drop: { e: '🗡️', n: 'Excalibur', d: "Steve's legendary blade — won by victory", t: 'weapon', power: 55, rarity: 'legendary', img: 'weapon-excalibur.png' }
   },
   {
     id: 'sharon', name: 'Shield Sharon', short: 'SHARON', e: '🛡️', xp: 75, feathers: 3,
+    img: 'avatar-shield-sharon.png',
     taunt: 'The best offense bores her.',
     arsenal: [
       { e: '🛡️', n: 'Round Shield',   power: 16, rarity: 'uncommon',  t: 'weapon' },
       { e: '🛡️', n: 'Tower Shield',   power: 24, rarity: 'rare',      t: 'weapon' },
       { e: '⚔️', n: 'Bash Blade',     power: 35, rarity: 'epic',      t: 'weapon' },
       { e: '🛡️', n: 'Mirror Wall',    power: 48, rarity: 'epic',      t: 'weapon' },
-      { e: '✨', n: 'Aegis of Dawn',  power: 62, rarity: 'legendary', t: 'weapon' }
+      { e: '✨', n: 'Aegis of Dawn',  power: 62, rarity: 'legendary', t: 'weapon', img: 'weapon-aegis.png' }
     ],
-    drop: { e: '✨', n: 'Aegis of Dawn', d: "Sharon's radiant bulwark — won by victory", t: 'weapon', power: 62, rarity: 'legendary' }
+    drop: { e: '✨', n: 'Aegis of Dawn', d: "Sharon's radiant bulwark — won by victory", t: 'weapon', power: 62, rarity: 'legendary', img: 'weapon-aegis.png' }
   },
   {
     id: 'axel', name: 'Axe Axel', short: 'AXEL', e: '🪓', xp: 100, feathers: 4,
+    img: 'avatar-axe-axel.png',
     taunt: 'Subtlety was never an option.',
     arsenal: [
       { e: '🪓', n: 'Cleaver',        power: 26, rarity: 'rare',      t: 'weapon' },
       { e: '🪓', n: 'Battle Axe',     power: 36, rarity: 'epic',      t: 'weapon' },
       { e: '🪓', n: 'Berserker Axe',  power: 48, rarity: 'epic',      t: 'weapon' },
       { e: '🪓', n: 'Twin-Bit Axe',   power: 60, rarity: 'legendary', t: 'weapon' },
-      { e: '🪓', n: 'Worldsplitter',  power: 70, rarity: 'legendary', t: 'weapon' }
+      { e: '🪓', n: 'Worldsplitter',  power: 70, rarity: 'legendary', t: 'weapon', img: 'weapon-worldsplitter.png' }
     ],
-    drop: { e: '🪓', n: 'Worldsplitter', d: "Axel's mountain-cleaving axe — won by victory", t: 'weapon', power: 70, rarity: 'legendary' }
+    drop: { e: '🪓', n: 'Worldsplitter', d: "Axel's mountain-cleaving axe — won by victory", t: 'weapon', power: 70, rarity: 'legendary', img: 'weapon-worldsplitter.png' }
   },
   {
     id: 'tina', name: 'Twin-Blade Tina', short: 'TINA', e: '⚔️', xp: 150, feathers: 5,
+    img: 'avatar-twinblade-tina.png',
     taunt: 'Two blades. Zero mercy.',
     arsenal: [
       { e: '⚔️', n: 'Twin Daggers',   power: 38, rarity: 'epic',      t: 'weapon' },
       { e: '⚔️', n: 'Dual Sabers',    power: 50, rarity: 'epic',      t: 'weapon' },
       { e: '⚔️', n: 'Storm Blades',   power: 60, rarity: 'legendary', t: 'weapon' },
       { e: '⚔️', n: 'Eclipse Edges',  power: 70, rarity: 'legendary', t: 'weapon' },
-      { e: '⚔️', n: 'Twin Fangs',     power: 78, rarity: 'mythic',    t: 'weapon' }
+      { e: '⚔️', n: 'Twin Fangs',     power: 78, rarity: 'mythic',    t: 'weapon', img: 'weapon-twinfangs.png' }
     ],
-    drop: { e: '⚔️', n: 'Twin Fangs', d: "Tina's paired mythic blades — won by victory", t: 'weapon', power: 76, rarity: 'mythic' }
+    drop: { e: '⚔️', n: 'Twin Fangs', d: "Tina's paired mythic blades — won by victory", t: 'weapon', power: 76, rarity: 'mythic', img: 'weapon-twinfangs.png' }
   },
   {
     id: 'goose', name: 'Grandmaster Goose', short: 'GOOSE', e: '🪿', xp: 250, feathers: 6,
+    img: 'avatar-grandmaster-goose.png',
     taunt: "Ducky's old mentor. Honk of legend.",
     arsenal: [
       { e: '🪶', n: 'Quill Dart',          power: 50, rarity: 'epic',      t: 'weapon' },
       { e: '🪶', n: 'Wing Buffet',         power: 62, rarity: 'legendary', t: 'weapon' },
       { e: '🪿', n: 'Honk of Doom',        power: 74, rarity: 'legendary', t: 'weapon' },
       { e: '🪶', n: 'Migration Maelstrom', power: 84, rarity: 'mythic',    t: 'weapon' },
-      { e: '🪶', n: 'Goosefeather Glaive', power: 90, rarity: 'mythic',    t: 'weapon' }
+      { e: '🪶', n: 'Goosefeather Glaive', power: 90, rarity: 'mythic',    t: 'weapon', img: 'weapon-glaive.png' }
     ],
-    drop: { e: '🪶', n: 'Goosefeather Glaive', d: "The Grandmaster's mythic glaive — won by victory", t: 'weapon', power: 88, rarity: 'mythic' }
+    drop: { e: '🪶', n: 'Goosefeather Glaive', d: "The Grandmaster's mythic glaive — won by victory", t: 'weapon', power: 88, rarity: 'mythic', img: 'weapon-glaive.png' }
   }
 ];
+
+// Backfill art onto weapons hatched/won before the art existed (e.g. an old Excalibur)
+const WEAPON_ART_BACKFILL = {
+  'Excalibur': 'weapon-excalibur.png',
+  'Aegis of Dawn': 'weapon-aegis.png',
+  'Worldsplitter': 'weapon-worldsplitter.png',
+  'Twin Fangs': 'weapon-twinfangs.png',
+  'Goosefeather Glaive': 'weapon-glaive.png'
+};
+function migrateWeaponArt() {
+  (state.inventory || []).forEach(i => {
+    if (!i.img && WEAPON_ART_BACKFILL[i.n]) i.img = WEAPON_ART_BACKFILL[i.n];
+  });
+}
+
+// Phase 9.1: the PNG asset frames never rendered cleanly (bad extractions) and are
+// retired. Owned/equipped copies convert to the new animated CSS frames in place.
+const FRAME_MIGRATION = {
+  'frame-common.png':    { n: 'Moonstone Frame', e: '🌙', frameClass: 'moonstone', d: 'Soft pearlescent shimmer.' },
+  'frame-uncommon.png':  { n: 'Emerald Frame',   e: '🟢', frameClass: 'emerald',   d: 'Glowing emerald-jeweled border.' },
+  'frame-rare.png':      { n: 'Sapphire Frame',  e: '🔵', frameClass: 'sapphire',  d: 'Deep sapphire-jeweled border.' },
+  'frame-epic.png':      { n: 'Amethyst Frame',  e: '🟣', frameClass: 'amethyst',  d: 'Royal amethyst-jeweled border.' },
+  'frame-legendary.png': { n: 'Sunforge Frame',  e: '🌅', frameClass: 'sunforge',  d: 'Molten gold, forged from a sunrise.' },
+  'frame-mythic.png':    { n: 'Rainbow Frame',   e: '🌈', frameClass: 'rainbow',   d: 'Prismatic rainbow-jeweled border — the rarest mount.' }
+};
+function migrateFrames() {
+  const convert = (item) => {
+    if (!item || item.t !== 'frame' || !item.img) return;
+    const repl = FRAME_MIGRATION[item.img];
+    if (!repl) return;
+    const oldName = item.n;
+    delete item.img;
+    item.n = repl.n; item.e = repl.e; item.frameClass = repl.frameClass; item.d = repl.d;
+    // Keep the Dingusdex consistent when the frame was renamed
+    if (oldName !== repl.n && state.dex && state.dex[oldName]) {
+      state.dex[repl.n] = (state.dex[repl.n] || 0) + state.dex[oldName];
+    }
+  };
+  (state.inventory || []).forEach(convert);
+  if (state.equipped && state.equipped.frame) convert(state.equipped.frame);
+}
+
+// Weapon art in Colosseum cards/reveals — real PNG when the item has one, emoji otherwise
+function colWeaponArt(w, big) {
+  if (w.img) {
+    const h = big ? 84 : 48;
+    return `<img src="${ASSET_PATH}${w.img}" style="height:${h}px; max-width:${Math.round(h * 1.3)}px; object-fit:contain;" alt="" onerror="this.outerHTML='${w.e}'">`;
+  }
+  return w.e;
+}
 
 function weekKey() {
   // ISO-ish week key: year + week number
@@ -6711,8 +6873,11 @@ function renderColosseumPhase() {
       if (!unlocked) action = `<span style="color:var(--text-dim);">🔒 Locked</span>`;
       else if (wonThisWeek) action = `<button class="secondary" onclick="startLadderMatch(${i})">✓ Rematch</button>`;
       else action = `<button onclick="startLadderMatch(${i})">⚔️ Challenge</button>`;
+      const portrait = r.img
+        ? `<img src="${ASSET_PATH}${r.img}" class="ladder-portrait" alt="" onerror="this.outerHTML='<span class=\\'ladder-emoji\\'>${r.e}</span>'">`
+        : `<span class="ladder-emoji">${r.e}</span>`;
       return `<div class="ladder-row ${!unlocked ? 'locked' : ''} ${wonThisWeek ? 'won' : ''}">
-        <span class="ladder-emoji">${r.e}</span>
+        ${portrait}
         <span class="ladder-info">
           <strong>${r.name}</strong>${everBeaten && !wonThisWeek ? ' <span style="color:var(--text-dim); font-size:0.8em;">(beaten before)</span>' : ''}
           <span class="ladder-taunt">${r.taunt}</span>
@@ -6730,51 +6895,75 @@ function renderColosseumPhase() {
   }
   else if (m.phase === 'countdown') {
     const remaining = Math.max(0, Math.ceil((m.countdownEnd - Date.now()) / 1000));
-    el.innerHTML = `
-      <h2>⚔️ vs ${m.rival.name} ⚔️</h2>
-      <p style="color:var(--text-dim); margin: 10px 0;">${m.rival.taunt}</p>
-      <div style="font-size:5em; color:var(--gold); margin: 20px; text-shadow: 3px 3px 0 #000;">${remaining}</div>
-      <p style="color:var(--gold-soft);">Ladder match — no power cap · 60 seconds to choose 3 weapons</p>
-      <button class="secondary" onclick="endColosseumMatch()" style="margin-top:14px;">Forfeit</button>
-    `;
+    // Build the DOM once; later ticks only update the number. Rebuilding the whole
+    // panel every 200ms destroyed buttons mid-click and ate user input.
+    if (m._rendered !== 'countdown') {
+      m._rendered = 'countdown';
+      const portrait = m.rival.img
+        ? `<img src="${ASSET_PATH}${m.rival.img}" style="height:140px; object-fit:contain; display:block; margin:6px auto 0;" alt="" onerror="this.remove()">`
+        : '';
+      el.innerHTML = `
+        <h2>⚔️ vs ${m.rival.name} ⚔️</h2>
+        ${portrait}
+        <p style="color:var(--text-dim); margin: 10px 0;">${m.rival.taunt}</p>
+        <div id="colCountNum" style="font-size:5em; color:var(--gold); margin: 20px; text-shadow: 3px 3px 0 #000;">${remaining}</div>
+        <p style="color:var(--gold-soft);">Ladder match — no power cap · 60 seconds to choose 3 weapons</p>
+        <button class="secondary" onclick="endColosseumMatch()" style="margin-top:14px;">Forfeit</button>
+      `;
+    } else {
+      const n = document.getElementById('colCountNum');
+      if (n) n.textContent = remaining;
+    }
     if (remaining <= 0) {
       m.phase = 'select';
       m.selectEnd = Date.now() + 60000;
+      m._rendered = null;
       playSound('achievement');
+      renderColosseumPhase();
+      return;
     }
-    setTimeout(renderColosseumPhase, 200);
+    setTimeout(() => { if (colosseumMatch === m && m.phase === 'countdown') renderColosseumPhase(); }, 200);
   }
   else if (m.phase === 'select') {
     const remaining = Math.max(0, Math.ceil((m.selectEnd - Date.now()) / 1000));
     const allWeapons = state.inventory.filter(i => i.t === 'weapon');
-    const totalPower = m.playerWeapons.reduce((acc, w) => acc + (w.power || 0), 0);
-    const canConfirm = m.playerWeapons.length === 3 && totalPower <= m.wagerCap;
-    el.innerHTML = `
-      <h2>Pick 3 Weapons</h2>
-      <div style="display:flex; justify-content:space-between; margin: 8px 0; font-size: 0.9em; flex-wrap:wrap; gap:8px;">
-        <span>⏱️ <strong>${remaining}</strong>s</span>
-        <span>⚔️ Total Power: <strong style="color:var(--gold);">${totalPower}</strong></span>
-        <span>Selected: <strong>${m.playerWeapons.length}/3</strong></span>
-      </div>
-      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:8px; margin: 12px 0;">
-        ${allWeapons.map((w, i) => {
-          const isSelected = m.playerWeapons.some(pw => pw === w);
-          const overCap = !isSelected && (totalPower + (w.power || 0) > m.wagerCap);
-          return `
-            <div class="item-card ${w.rarity}" style="cursor:pointer; ${isSelected ? 'border-color:var(--gold); transform:translateY(-2px); box-shadow:0 0 10px var(--gold);' : ''} ${overCap && !isSelected ? 'opacity:0.4;' : ''}" onclick="toggleColosseumWeapon(${i})">
-              <div class="item-emoji">${w.e}</div>
-              <div class="item-name">${escapeHtml(w.n)}</div>
-              <div class="item-rarity ${w.rarity}">${w.rarity}</div>
-              <div style="color:var(--gold); font-size:0.85em; margin-top:2px;">⚔️ ${w.power || 0}</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-      <div style="position: sticky; bottom: -24px; background: linear-gradient(to top, var(--bg-3) 70%, rgba(15,52,96,0)); padding: 14px 0 4px; margin: 0 -24px -24px; padding-left: 24px; padding-right: 24px;">
-        <button onclick="confirmColosseumPicks()" ${canConfirm ? '' : 'disabled style="opacity:0.5;"'}>Confirm Selection</button>
-        <button class="secondary" onclick="endColosseumMatch()" style="margin-left:8px;">Forfeit</button>
-      </div>
-    `;
+    // Build the grid only when the selection changes (toggleColosseumWeapon resets
+    // m._rendered). The 300ms tick previously rebuilt the entire grid, which destroyed
+    // the card/button under the cursor mid-click — that was the "clicks not registering" bug.
+    if (m._rendered !== 'select') {
+      m._rendered = 'select';
+      const totalPower = m.playerWeapons.reduce((acc, w) => acc + (w.power || 0), 0);
+      const canConfirm = m.playerWeapons.length === 3 && totalPower <= m.wagerCap;
+      el.innerHTML = `
+        <h2>Pick 3 Weapons</h2>
+        <div style="display:flex; justify-content:space-between; margin: 8px 0; font-size: 0.9em; flex-wrap:wrap; gap:8px;">
+          <span>⏱️ <strong id="colSelTimer">${remaining}</strong>s</span>
+          <span>⚔️ Total Power: <strong style="color:var(--gold);">${totalPower}</strong></span>
+          <span>Selected: <strong>${m.playerWeapons.length}/3</strong></span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:8px; margin: 12px 0;">
+          ${allWeapons.map((w, i) => {
+            const isSelected = m.playerWeapons.some(pw => pw === w);
+            const overCap = !isSelected && (totalPower + (w.power || 0) > m.wagerCap);
+            return `
+              <div class="item-card ${w.rarity}" style="cursor:pointer; ${isSelected ? 'border-color:var(--gold); transform:translateY(-2px); box-shadow:0 0 10px var(--gold);' : ''} ${overCap && !isSelected ? 'opacity:0.4;' : ''}" onclick="toggleColosseumWeapon(${i})">
+                ${w.img ? `<img src="${ASSET_PATH}${w.img}" class="item-img" alt="">` : `<div class="item-emoji">${w.e}</div>`}
+                <div class="item-name">${escapeHtml(w.n)}</div>
+                <div class="item-rarity ${w.rarity}">${w.rarity}</div>
+                <div style="color:var(--gold); font-size:0.85em; margin-top:2px;">⚔️ ${w.power || 0}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div style="position: sticky; bottom: -24px; background: linear-gradient(to top, var(--bg-3) 70%, rgba(15,52,96,0)); padding: 14px 0 4px; margin: 0 -24px -24px; padding-left: 24px; padding-right: 24px;">
+          <button onclick="confirmColosseumPicks()" ${canConfirm ? '' : 'disabled style="opacity:0.5;"'}>Confirm Selection</button>
+          <button class="secondary" onclick="endColosseumMatch()" style="margin-left:8px;">Forfeit</button>
+        </div>
+      `;
+    } else {
+      const t = document.getElementById('colSelTimer');
+      if (t) t.textContent = remaining;
+    }
     if (remaining <= 0) {
       // Time's up — auto-fill if needed
       if (m.playerWeapons.length < 3) {
@@ -6790,7 +6979,7 @@ function renderColosseumPhase() {
       confirmColosseumPicks();
       return;
     }
-    setTimeout(renderColosseumPhase, 300);
+    setTimeout(() => { if (colosseumMatch === m && m.phase === 'select') renderColosseumPhase(); }, 300);
   }
   else if (m.phase === 'roundpick') {
     // Player picks which weapon to use this round
@@ -6822,7 +7011,7 @@ function renderColosseumPhase() {
           const idx = m.playerWeapons.indexOf(w);
           return `
           <div class="item-card ${w.rarity}" style="cursor:pointer;" onclick="pickRoundWeapon(${idx})">
-            <div class="item-emoji">${w.e}</div>
+            ${w.img ? `<img src="${ASSET_PATH}${w.img}" class="item-img" alt="">` : `<div class="item-emoji">${w.e}</div>`}
             <div class="item-name">${escapeHtml(w.n)}</div>
             <div class="item-rarity ${w.rarity}">${w.rarity}</div>
             <div style="color:var(--gold); font-size:0.85em;">⚔️ ${w.power || 0}</div>
@@ -6845,14 +7034,14 @@ function renderColosseumPhase() {
       <div style="display:flex; justify-content:space-around; align-items:center; margin: 30px 0; gap: 20px;">
         <div style="text-align:center; ${elapsed > 1800 && winner !== 'player' ? 'opacity: 0.4;' : ''}">
           <div style="font-size:0.85em; color:var(--text-dim);">YOU</div>
-          <div style="font-size:5em; ${elapsed > 1500 && winner === 'bot' ? 'animation: clashLose 0.8s forwards;' : ''}">${playerPick.e}</div>
+          <div style="font-size:5em; ${elapsed > 1500 && winner === 'bot' ? 'animation: clashLose 0.8s forwards;' : ''}">${colWeaponArt(playerPick, true)}</div>
           <div style="color:var(--gold);">⚔️ ${playerPick.power}</div>
           <div style="font-size:0.8em;">${escapeHtml(playerPick.n)}</div>
         </div>
         <div style="font-size:3em; color:var(--gold); animation: clashHit 0.8s;">⚡</div>
         <div style="text-align:center; ${elapsed > 1800 && winner !== 'bot' ? 'opacity: 0.4;' : ''}">
           <div style="font-size:0.85em; color:var(--text-dim);">${m.rival.short}</div>
-          <div style="font-size:5em; ${elapsed > 1500 && winner === 'player' ? 'animation: clashLose 0.8s forwards;' : ''}">${botPick.e}</div>
+          <div style="font-size:5em; ${elapsed > 1500 && winner === 'player' ? 'animation: clashLose 0.8s forwards;' : ''}">${colWeaponArt(botPick, true)}</div>
           <div style="color:var(--gold);">⚔️ ${botPick.power}</div>
           <div style="font-size:0.8em;">${escapeHtml(botPick.n)}</div>
         </div>
@@ -6862,8 +7051,11 @@ function renderColosseumPhase() {
       </div>
       <button onclick="advanceColosseumRound()" style="margin-top:14px; visibility: ${elapsed > 2500 ? 'visible' : 'hidden'};">Continue</button>
     `;
-    if (elapsed < 2700) {
-      setTimeout(renderColosseumPhase, 250);
+    // Re-render only at the animation thresholds instead of polling every 250ms —
+    // continuous rebuilds destroyed the Continue button mid-click.
+    const nextThreshold = [1500, 1800, 2500].find(t => t > elapsed);
+    if (nextThreshold) {
+      setTimeout(() => { if (colosseumMatch === m && m.phase === 'reveal') renderColosseumPhase(); }, nextThreshold - elapsed + 50);
     }
   }
   else if (m.phase === 'final') {
@@ -6945,6 +7137,7 @@ function toggleColosseumWeapon(idx) {
     if (newTotal > m.wagerCap) { toast(`That would exceed the ${m.wagerCap} cap.`); return; }
     m.playerWeapons.push(w);
   }
+  m._rendered = null; // selection changed — force a real rebuild
   playSound('click');
   renderColosseumPhase();
 }
@@ -7780,6 +7973,9 @@ document.getElementById('fxToggle').checked = state.settings.fx;
 }
 updateAvatarNameDisplay();
 drawAvatar();
+migrateWeaponArt();
+migrateFrames();
+applyAvatarFrame();
 renderStats();
 renderGoals();
 renderContracts();
