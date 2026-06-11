@@ -2134,7 +2134,7 @@
   <!-- SETTINGS TAB -->
   <div class="tab-content" id="tab-settings">
     <div class="panel">
-      <h2>Settings</h2>
+      <h2>Settings <span style="font-size:0.5em; color:var(--text-dim); font-weight:normal;">build v9.5</span></h2>
       <div class="settings-row">
         <div>
           <div>Sound effects</div>
@@ -2191,6 +2191,13 @@
           <div style="font-size:0.75em; color:var(--text-dim);">See the welcome guide again</div>
         </div>
         <button class="secondary" onclick="showOnboarding()">👋 Show</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div>About</div>
+          <div style="font-size:0.75em; color:var(--text-dim);">Dingus Eggs — Phase 9</div>
+        </div>
+        <span id="buildVersion" style="font-weight:bold; color:var(--gold); font-size:1.05em;">build v9.5</span>
       </div>
     </div>
   </div>
@@ -4127,8 +4134,22 @@ function toggleSubgoal(goalId, subIdx) {
   petGainXP(5);
   nestAddWarmth(5);
   contractsProgress('subgoals', 1);
-  toast('+1 🥚 Small Egg!');
   playSound('click');
+
+  // All subgoals done → auto-complete the parent goal (completeGoal has its own
+  // guards for already-completed one-time goals and already-done-today dailies)
+  const allDone = (goal.subgoals || []).length > 0 && goal.subgoals.every(s => s.done);
+  const alreadyComplete = goal.type === 'daily'
+    ? goal.lastCompletedDate === new Date().toDateString()
+    : !!goal.completed;
+  if (allDone && !alreadyComplete) {
+    toast('+1 🥚 Small Egg! All subgoals done — completing the goal! 🎉');
+    save(); renderGoals(); renderStats();
+    completeGoal(goalId);
+    return;
+  }
+
+  toast('+1 🥚 Small Egg!');
   save(); renderGoals(); renderStats();
 }
 
@@ -5795,13 +5816,9 @@ function drawWarehouse() {
 }
 
 function drawWarehouseBackground(ctx, W, H) {
-  // Decide which background image to paint:
-  //   1. If the player has a background equipped that has its own art, use that.
-  //   2. Otherwise default to bg-hatchery.png.
-  let bgFile = 'bg-hatchery.png';
-  if (state.equipped.background && state.equipped.background.img) {
-    bgFile = state.equipped.background.img;
-  }
+  // The Hatchery room ALWAYS paints its own background. Equipped backgrounds only
+  // decorate the profile panel — they no longer reskin the room (v9.5 fix).
+  const bgFile = 'bg-hatchery.png';
   if (isAssetReady(bgFile)) {
     const img = getAsset(bgFile);
     // "Cover" — fill the canvas while preserving the image's aspect ratio, center-crop any overflow.
@@ -8326,7 +8343,7 @@ function focusDownload(content, filename, mime) {
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
 }
 
-// build-marker: v9.3-vehicle-png-in-hatchery
+// build-marker: v9.5-subgoal-autocomplete-art-wiring-frames
 </script>
 </body>
 </html>
