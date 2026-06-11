@@ -258,6 +258,20 @@
     0% { background-position: 0% 50%; }
     100% { background-position: 350% 50%; }
   }
+  /* Pet display-form picker on inventory cards */
+  .pet-form-picker { display: flex; justify-content: center; gap: 3px; margin-top: 4px; }
+  .pet-form-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid #555;
+    border-radius: 6px;
+    font-size: 0.85em;
+    padding: 1px 6px;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .pet-form-btn:hover { border-color: var(--gold); }
+  .pet-form-btn.active { border-color: var(--gold); background: rgba(255,215,0,0.18); box-shadow: 0 0 6px rgba(255,215,0,0.4); }
+
   /* Mini frame preview used on inventory + dex cards */
   .frame-chip {
     width: 46px;
@@ -941,9 +955,9 @@
   /* Equipped weapon — floats to the right at hip height with a soft golden glow ring */
   .equipped-weapon {
     position: absolute;
-    right: 0;
+    right: 2%;
     top: 50%;
-    transform: translate(40%, -40%);
+    transform: translate(0, -40%);
     width: 38%;
     height: 38%;
     display: flex;
@@ -2667,6 +2681,24 @@ function petStageIndex(name) {
   return s;
 }
 
+// The form the pet DISPLAYS in (avatar frame + Hatchery follower). Defaults to the
+// highest unlocked stage; the player can pick any unlocked form per pet.
+function petDisplayStage(name) {
+  const unlocked = petStageIndex(name);
+  const pref = (state.petForm || {})[name];
+  return (pref == null) ? unlocked : Math.min(pref, unlocked);
+}
+
+function setPetForm(name, stage) {
+  if (!state.petForm) state.petForm = {};
+  state.petForm[name] = stage;
+  save();
+  if (typeof renderInventory === 'function') renderInventory();
+  if (typeof renderEquippedSlots === 'function') renderEquippedSlots();
+  toast(`${name} will appear in ${PET_STAGES[Math.min(stage, petStageIndex(name))].n} form.`);
+  playSound('click');
+}
+
 function petGainXP(amount) {
   const pet = state.equipped && state.equipped.pet;
   if (!pet || !amount) return;
@@ -2686,7 +2718,7 @@ function petGainXP(amount) {
 // if the evolution file isn't loaded/present.
 function petStageImg(item) {
   if (!item || !item.img || item.t !== 'pet') return item && item.img;
-  const stage = petStageIndex(item.n);
+  const stage = petDisplayStage(item.n);
   if (stage === 0) return item.img;
   const file = item.img.replace(/\.png$/, (stage === 1 ? '-adult' : '-radiant') + '.png');
   return isAssetReady(file) ? file : item.img;
@@ -2694,7 +2726,7 @@ function petStageImg(item) {
 
 function drawPetSprite(ctx, cx, cy, item, scale) {
   scale = scale || 1;
-  const stage = item.t === 'pet' ? petStageIndex(item.n) : 0;
+  const stage = item.t === 'pet' ? petDisplayStage(item.n) : 0;
   const size = Math.round(30 * scale * PET_STAGES[stage].scale);
   // Radiant pets glow with their rarity aura
   if (stage >= 2 && item.rarity) {
@@ -2938,6 +2970,8 @@ let state = {
   dexMilestones: {}, // rarity -> claim date
   // Phase 9: pet growth — pet name -> accumulated pet XP (keyed by name so dupes share progress)
   petXP: {},
+  // Phase 9.5: pet name -> preferred DISPLAY form (0/1/2), capped at the unlocked stage
+  petForm: {},
   // Phase 9: incubation nest — [{ size, warmth, placedAt }]
   nest: [],
   // Phase 9: Ducky's Daily Contracts + Feathers
@@ -3094,6 +3128,20 @@ function normalizeState() {
         changed = true;
       }
     });
+    // Re-grant Colosseum drop weapons the old purge deleted. everBeaten blocks
+    // a re-drop in battle, so without this the weapon is lost forever.
+    if (typeof LADDER_RIVALS !== 'undefined' && state.ladder && state.ladder.everBeaten) {
+      LADDER_RIVALS.forEach(r => {
+        if (!r.drop || !state.ladder.everBeaten[r.id]) return;
+        const holdsWeapon = state.inventory.some(i => i && i.n === r.drop.n) ||
+          (state.equipped && state.equipped.weapon && state.equipped.weapon.n === r.drop.n);
+        if (!holdsWeapon) {
+          state.inventory.push({ ...r.drop, id: Date.now() + Math.random() });
+          if (state.dex && !state.dex[r.drop.n]) state.dex[r.drop.n] = 1;
+          changed = true;
+        }
+      });
+    }
   }
   // Migrate creature names: old hatches stored "Pet Mouse" etc. Rename them
   // based on the image they're tied to so old and new pets match.
@@ -5059,10 +5107,21 @@ function renderInventory() {
     let petLine = '';
     if (item.t === 'pet') {
       const stage = petStageIndex(item.n);
+      const shown = petDisplayStage(item.n);
       const xp = (state.petXP || {})[item.n] || 0;
       const next = PET_STAGES[stage + 1];
       const prog = next ? ` · ${xp}/${next.at}` : ' · MAX';
       petLine = `<div style="font-size:0.68em; color:var(--gold); margin-top:2px;">${stage >= 2 ? '🌟' : stage === 1 ? '⭐' : '🐣'} ${PET_STAGES[stage].n}${prog}</div>`;
+      // Evolved pets get a form picker — choose which form displays (frame + Hatchery)
+      if (stage >= 1 && item.img) {
+        const icons = ['🐣', '⭐', '🌟'];
+        const safeName = item.n.replace(/'/g, "\\'");
+        petLine += `<div class="pet-form-picker">` + PET_STAGES.map((st, si) =>
+          si <= stage
+            ? `<button class="pet-form-btn ${si === shown ? 'active' : ''}" onclick="event.stopPropagation(); setPetForm('${safeName}', ${si})" title="Display ${st.n} form">${icons[si]}</button>`
+            : ''
+        ).join('') + `</div>`;
+      }
     }
     return `
     <div class="item-card ${item.rarity} ${isEquipped ? 'equipped' : ''}" onclick="equipItem('${item.id}')">
@@ -5091,8 +5150,10 @@ function renderEquippedSlots() {
     const el = document.getElementById(id);
     if (!el) return;
     if (!item) { el.innerHTML = ''; return; }
-    if (item.img) {
-      el.innerHTML = `<img src="${ASSET_PATH}${item.img}" alt="${escapeHtml(item.n || '')}">`;
+    // Pets show their selected display form in the avatar frame
+    const artFile = item.t === 'pet' ? petStageImg(item) : item.img;
+    if (artFile) {
+      el.innerHTML = `<img src="${ASSET_PATH}${artFile}" alt="${escapeHtml(item.n || '')}">`;
     } else if (item.svgKey) {
       el.innerHTML = accessorySvg(item.svgKey, 'slot');
     } else {
@@ -6213,9 +6274,14 @@ function drawTrophyRoom(ctx, W, H) {
   // Hatchery door (right side)
   drawHatcheryDoor(ctx, wh.hatcheryDoor);
 
-  // Trophy pedestals — sort items by rarity (best first), put them on pedestals in 2 rows
+  // Trophy pedestals — every unique PET and WEAPON with real asset art,
+  // rarest first, displayed using the art itself (pets show their evolution stage).
   const order = { mythic: 0, legendary: 1, epic: 2, rare: 3, uncommon: 4, common: 5 };
-  const inv = [...state.inventory].sort((a, b) => order[a.rarity] - order[b.rarity]);
+  const seen = new Set();
+  const inv = state.inventory
+    .filter(i => i && i.img && (i.t === 'pet' || i.t === 'weapon'))
+    .filter(i => seen.has(i.n) ? false : (seen.add(i.n), true))
+    .sort((a, b) => order[a.rarity] - order[b.rarity]);
   // Two rows: back row (closer to wall) gets the rarest, front row gets next tier
   const backRowY = 200;
   const frontRowY = 320;
@@ -6329,11 +6395,26 @@ function drawPedestal(ctx, x, y, item, isBack) {
       ctx.fill();
     }
   }
-  // Item emoji
-  ctx.font = '26px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(item.e, x, y - 8);
+  // Item art — real asset PNG when loaded (pets use their evolution-stage art),
+  // emoji as a loading/missing fallback.
+  const artFile = item.t === 'pet' ? petStageImg(item) : item.img;
+  let drewArt = false;
+  if (artFile) {
+    const img = getAsset(artFile);
+    if (img && img.complete && img.naturalWidth > 0) {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let h = 42, w = h * ratio;
+      if (w > 54) { w = 54; h = w / ratio; }
+      ctx.drawImage(img, x - w / 2, y - 2 - h, w, h); // bottom rests on the pedestal top
+      drewArt = true;
+    }
+  }
+  if (!drewArt) {
+    ctx.font = '26px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.e, x, y - 8);
+  }
   // Item label (smaller text, below pedestal)
   if (!isBack) {
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -6728,10 +6809,11 @@ function drawColosseum(ctx, W, H) {
   drawHatcheryDoor(ctx, wh.hatcheryDoor);
 
   // Two pedestals: left (player) and right (Sword Steve)
+  // The right pedestal shows your most recently challenged ladder rival (Steve by default)
+  const sceneRival = LADDER_RIVALS.find(r => r.id === state.lastRivalId) || LADDER_RIVALS[0];
   drawPedestalCombat(ctx, wh.leftPedestal, wh.nearLeftPedestal, 'YOU');
-  drawPedestalCombat(ctx, wh.rightPedestal, false, 'STEVE');
+  drawPedestalCombat(ctx, wh.rightPedestal, false, sceneRival.short);
 
-  // Sword Steve always stands on right pedestal
   const drawables = [];
   const stevePos = { x: wh.rightPedestal.x + wh.rightPedestal.w/2, y: wh.rightPedestal.y - 4 };
   drawables.push({
@@ -6741,22 +6823,28 @@ function drawColosseum(ctx, W, H) {
       ctx.beginPath();
       ctx.ellipse(stevePos.x, stevePos.y + 30, 18, 5, 0, 0, Math.PI*2);
       ctx.fill();
-      if (isAssetReady('avatar-sword-steve.png')) {
-        const sImg = getAsset('avatar-sword-steve.png');
+      if (sceneRival.img && isAssetReady(sceneRival.img)) {
+        const sImg = getAsset(sceneRival.img);
         const sh = 324; // match player avatar
         const sw = sh * (sImg.naturalWidth / sImg.naturalHeight);
         ctx.drawImage(sImg, stevePos.x - sw/2, stevePos.y + 32 - sh, sw, sh);
-      } else {
+      } else if (sceneRival.id === 'steve') {
         drawChibi(ctx, stevePos.x, stevePos.y + 32, 2, SWORD_STEVE.avatar, {});
+      } else {
+        // Portrait not loaded yet — emoji stand-in
+        ctx.font = '64px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(sceneRival.e, stevePos.x, stevePos.y + 20);
       }
       // Steve's name above his head
       ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      ctx.fillRect(stevePos.x - 38, stevePos.y - 90, 76, 14);
+      ctx.fillRect(stevePos.x - 50, stevePos.y - 90, 100, 14);
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 9px Courier New';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Sword Steve', stevePos.x, stevePos.y - 83);
+      ctx.fillText(sceneRival.name, stevePos.x, stevePos.y - 83);
     }
   });
 
@@ -6884,6 +6972,8 @@ function startLadderMatch(rivalIdx) {
     toast(`Need 3+ weapons to compete. You have ${playerWeapons.length}.`);
     return;
   }
+  state.lastRivalId = rival.id; // the Colosseum room shows your latest challenger
+  save();
   colosseumMatch = {
     phase: 'countdown',
     rival,
